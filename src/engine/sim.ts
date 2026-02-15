@@ -28,12 +28,21 @@ export class Simulation {
     }
 
     step() {
-        if (this.tick > 0 && this.tick % 10 === 0) {
+        const isV5 = this.envParams.mode !== undefined;
+        const phaseTick = 30;
+
+        if (this.tick === phaseTick && isV5) {
+            this.emitGlobal('PHASE_SHIFT', { x: 8, y: 6 }, 'mountain', ['clash_begins']);
+        }
+
+        const isClash = isV5 && this.tick >= phaseTick;
+
+        if (this.tick > 0 && (this.tick % (isClash ? 5 : 10) === 0)) {
             this.advanceStorm();
         }
 
         this.snakes.filter(s => s.alive).forEach(snake => {
-            this.updateSnake(snake);
+            this.updateSnake(snake, isClash);
         });
 
         this.resolveCombat();
@@ -57,14 +66,19 @@ export class Simulation {
         this.emitGlobal('STORM_ADVANCE', { x: 0, y: 0 }, 'desert', [`level_${this.stormLevel}`]);
     }
 
-    updateSnake(snake: SnakeState) {
+    updateSnake(snake: SnakeState, isClash: boolean) {
         this.updateFlags(snake);
         const options = this.perceive(snake);
-        const move = this.decideMove(snake, options);
+        const move = this.decideMove(snake, options, isClash);
 
         if (move) {
             snake.pos = move;
             const cell = this.world[move.y][move.x];
+
+            if (this.envParams.mode && Math.random() < 0.1 && !cell.food && !cell.hazard) {
+                this.triggerEncounter(snake, cell);
+            }
+
             if (cell.food) snake.memory.food.push({ ...move });
             if (cell.hazard) snake.memory.hazards.push({ ...move });
 
@@ -73,6 +87,28 @@ export class Simulation {
 
             if (cell.food) this.handleFood(snake, cell);
             if (cell.hazard) this.handleHazard(snake, cell);
+        }
+    }
+
+    triggerEncounter(snake: SnakeState, cell: Cell) {
+        const theme = this.envParams.theme;
+        const choices = theme === 'MEDIEVAL'
+            ? ['Charge the Outpost', 'Pray at the Altar', 'Salvage the Wreckage']
+            : ['Hack the Terminal', 'Search the Pod', 'Engage the Auto-Turret'];
+
+        const choice = choices[Math.floor(Math.random() * choices.length)];
+        this.emit(snake, 'ENCOUNTER_CHOICE', snake.pos, cell.terrain, [choice]);
+
+        const roll = Math.random() * 20 + (snake.currentStats.agility + snake.currentStats.size);
+        if (roll > 25) {
+            snake.experience += 20;
+            snake.honor += 10;
+            snake.scavengeProfit += 50;
+            this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['VICTORY', 'Gained Profit & XP']);
+        } else {
+            snake.hp -= 15;
+            snake.honor -= 5;
+            this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['FAILURE', 'Ambushed!']);
         }
     }
 
@@ -110,148 +146,126 @@ export class Simulation {
         }
         if (validOptions.length === 0) validOptions = options;
 
-        // In Clash phase, seeking enemy becomes paramount for some, or survival for others
         const goalBias = isClash ? 'seeks_enemy' : bias;
-        const memoryFood = snake.memory.food.find(f => validOptions.some(o => o.x === f.x && o.y === f.y));
-        if (memoryFood) return memoryFood;
-        const visibleFood = validOptions.find(o => this.world[o.y][o.x].food);
-        if (visibleFood) return visibleFood;
+
+        if (goalBias === 'seeks_food' || snake.hp < 50) {
+            const memoryFood = snake.memory.food.find(f => validOptions.some(o => o.x === f.x && o.y === f.y));
+            if (memoryFood) return memoryFood;
+            const visibleFood = validOptions.find(o => this.world[o.y][o.x].food);
+            if (visibleFood) return visibleFood;
+        }
+
+        if (goalBias === 'seeks_enemy') {
+            const enemy = this.snakes.find(s => s.alive && s.team !== snake.team);
+            if (enemy) {
+                return validOptions.sort((a, b) => {
+                    const distA = Math.abs(a.x - enemy.pos.x) + Math.abs(a.y - enemy.pos.y);
+                    const distB = Math.abs(b.x - enemy.pos.x) + Math.abs(b.y - enemy.pos.y);
+                    return distA - distB;
+                })[0];
+            }
+        }
+
+        return validOptions[Math.floor(Math.random() * validOptions.length)];
     }
 
-    if(bias === 'seeks_enemy') {
-    const enemy = this.snakes.find(s => s.alive && s.team !== snake.team);
-    if (enemy) {
-        return validOptions.sort((a, b) => {
-            const distA = Math.abs(a.x - enemy.pos.x) + Math.abs(a.y - enemy.pos.y);
-            const distB = Math.abs(b.x - enemy.pos.x) + Math.abs(b.y - enemy.pos.y);
-            return distA - distB;
-        })[0];
-    }
-}
-
-return validOptions[Math.floor(Math.random() * validOptions.length)];
+    handleFood(snake: SnakeState, cell: Cell) {
+        if (!cell.food) return;
+        const heal = cell.food.value;
+        snake.hp = Math.min(snake.maxHp, snake.hp + heal);
+        this.emit(snake, 'FOOD_EAT', snake.pos, cell.terrain, [cell.food.kind], heal);
+        cell.food = null;
     }
 
-triggerEncounter(snake: SnakeState, cell: Cell) {
-    const theme = this.envParams.theme;
-    const choices = theme === 'MEDIEVAL'
-        ? ['Charge the Outpost', 'Pray at the Altar', 'Salvage the Wreckage']
-        : ['Hack the Terminal', 'Search the Pod', 'Engage the Auto-Turret'];
-
-    const choice = choices[Math.floor(Math.random() * choices.length)];
-    this.emit(snake, 'ENCOUNTER_CHOICE', snake.pos, cell.terrain, [choice]);
-
-    // Outcome based on stats
-    const roll = Math.random() * 20 + (snake.currentStats.agility + snake.currentStats.size);
-    if (roll > 25) {
-        snake.experience += 20;
-        snake.honor += 10;
-        snake.scavengeProfit += 50;
-        this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['VICTORY', 'Gained Profit & XP']);
-    } else {
-        snake.hp -= 15;
-        snake.honor -= 5;
-        this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['FAILURE', 'Ambushed!']);
+    handleHazard(snake: SnakeState, cell: Cell) {
+        if (!cell.hazard) return;
+        let damage = cell.hazard.damage;
+        if (snake.draft.quirk === 'Reckless') damage *= 1.5;
+        snake.hp -= damage;
+        this.emit(snake, 'HAZARD_HIT', snake.pos, cell.terrain, [cell.hazard.kind], damage);
+        if (snake.hp <= 0) {
+            snake.alive = false;
+            this.emit(snake, 'KO', snake.pos, cell.terrain, ['hazard_death']);
+        }
     }
-}
 
-handleFood(snake: SnakeState, cell: Cell) {
-    if (!cell.food) return;
-    const heal = cell.food.value;
-    snake.hp = Math.min(snake.maxHp, snake.hp + heal);
-    this.emit(snake, 'FOOD_EAT', snake.pos, cell.terrain, [cell.food.kind], heal);
-    cell.food = null;
-}
-
-handleHazard(snake: SnakeState, cell: Cell) {
-    if (!cell.hazard) return;
-    let damage = cell.hazard.damage;
-    if (snake.draft.quirk === 'Reckless') damage *= 1.5;
-    snake.hp -= damage;
-    this.emit(snake, 'HAZARD_HIT', snake.pos, cell.terrain, [cell.hazard.kind], damage);
-    if (snake.hp <= 0) {
-        snake.alive = false;
-        this.emit(snake, 'KO', snake.pos, cell.terrain, ['hazard_death']);
-    }
-}
-
-resolveCombat() {
-    const pairs: [SnakeState, SnakeState][] = [];
-    this.snakes.filter(s => s.alive).forEach(s1 => {
-        this.snakes.filter(s => s.alive && s.team !== s1.team).forEach(s2 => {
-            if (Math.abs(s1.pos.x - s2.pos.x) <= 1 && Math.abs(s1.pos.y - s2.pos.y) <= 1) {
-                if (!pairs.some(p => (p[0] === s1 && p[1] === s2) || (p[0] === s2 && p[1] === s1))) {
-                    pairs.push([s1, s2]);
+    resolveCombat() {
+        const pairs: [SnakeState, SnakeState][] = [];
+        this.snakes.filter(s => s.alive).forEach(s1 => {
+            this.snakes.filter(s => s.alive && s.team !== s1.team).forEach(s2 => {
+                if (Math.abs(s1.pos.x - s2.pos.x) <= 1 && Math.abs(s1.pos.y - s2.pos.y) <= 1) {
+                    if (!pairs.some(p => (p[0] === s1 && p[1] === s2) || (p[0] === s2 && p[1] === s1))) {
+                        pairs.push([s1, s2]);
+                    }
                 }
+            });
+        });
+        pairs.forEach(([s1, s2]) => this.dramaticFight(s1, s2));
+    }
+
+    dramaticFight(s1: SnakeState, s2: SnakeState) {
+        this.emit(s1, 'COMBAT_START', s1.pos, this.world[s1.pos.y][s1.pos.x].terrain, [`vs_${s2.name}`], undefined, s2.id);
+        const dmg1 = this.calcDmg(s1, s2);
+        const dmg2 = this.calcDmg(s2, s1);
+        s2.hp -= dmg1;
+        s1.hp -= dmg2;
+        this.emit(s1, 'COMBAT_EXCHANGE', s1.pos, this.world[s1.pos.y][s1.pos.x].terrain, ['exchange_1'], dmg1, s2.id);
+
+        if (s1.hp <= 0 && s1.alive) {
+            s1.alive = false;
+            this.emit(s1, 'KO', s1.pos, this.world[s1.pos.y][s1.pos.x].terrain, [`slain_by_${s2.name}`], undefined, s2.id);
+            s2.flags.push('DOMINANT');
+        }
+        if (s2.hp <= 0 && s2.alive) {
+            s2.alive = false;
+            this.emit(s2, 'KO', s2.pos, this.world[s2.pos.y][s2.pos.x].terrain, [`slain_by_${s1.name}`], undefined, s1.id);
+            s1.flags.push('DOMINANT');
+        }
+        if (s1.alive && s2.alive) {
+            this.emit(s1, 'COMBAT_END', s1.pos, this.world[s1.pos.y][s1.pos.x].terrain, ['stalemate'], undefined, s2.id);
+        }
+    }
+
+    calcDmg(attacker: SnakeState, defender: SnakeState) {
+        let dmg = attacker.currentStats.venom + attacker.currentStats.size;
+        return Math.max(2, dmg + Math.floor(Math.random() * 5));
+    }
+
+    emit(snake: SnakeState, type: EventType, pos: { x: number, y: number }, terrain: TerrainType, tags: string[], amount?: number, targetId?: string) {
+        this.events.push({
+            id: Math.random().toString(36).substr(2, 9),
+            tick: this.tick,
+            snakeId: snake.id,
+            type,
+            pos,
+            terrain,
+            targetId,
+            amount,
+            tags,
+            snapshot: {
+                hp: snake.hp,
+                effectiveStats: { ...snake.currentStats },
+                aiState: snake.aiState,
+                flags: [...snake.flags]
             }
         });
-    });
-    pairs.forEach(([s1, s2]) => this.dramaticFight(s1, s2));
-}
-
-dramaticFight(s1: SnakeState, s2: SnakeState) {
-    this.emit(s1, 'COMBAT_START', s1.pos, this.world[s1.pos.y][s1.pos.x].terrain, [`vs_${s2.name}`], undefined, s2.id);
-    const dmg1 = this.calcDmg(s1, s2);
-    const dmg2 = this.calcDmg(s2, s1);
-    s2.hp -= dmg1;
-    s1.hp -= dmg2;
-    this.emit(s1, 'COMBAT_EXCHANGE', s1.pos, this.world[s1.pos.y][s1.pos.x].terrain, ['exchange_1'], dmg1, s2.id);
-
-    if (s1.hp <= 0 && s1.alive) {
-        s1.alive = false;
-        this.emit(s1, 'KO', s1.pos, this.world[s1.pos.y][s1.pos.x].terrain, [`slain_by_${s2.name}`], undefined, s2.id);
-        s2.flags.push('DOMINANT');
     }
-    if (s2.hp <= 0 && s2.alive) {
-        s2.alive = false;
-        this.emit(s2, 'KO', s2.pos, this.world[s2.pos.y][s2.pos.x].terrain, [`slain_by_${s1.name}`], undefined, s1.id);
-        s1.flags.push('DOMINANT');
+
+    emitGlobal(type: EventType, pos: { x: number, y: number }, terrain: TerrainType, tags: string[]) {
+        this.events.push({
+            id: Math.random().toString(36).substr(2, 9),
+            tick: this.tick,
+            snakeId: 'SYSTEM',
+            type,
+            pos,
+            terrain,
+            tags,
+            snapshot: {
+                hp: 0,
+                effectiveStats: { speed: 0, size: 0, venom: 0, agility: 0, camouflage: 0 },
+                aiState: 'none',
+                flags: []
+            }
+        });
     }
-    if (s1.alive && s2.alive) {
-        this.emit(s1, 'COMBAT_END', s1.pos, this.world[s1.pos.y][s1.pos.x].terrain, ['stalemate'], undefined, s2.id);
-    }
-}
-
-calcDmg(attacker: SnakeState, defender: SnakeState) {
-    let dmg = attacker.currentStats.venom + attacker.currentStats.size;
-    return Math.max(2, dmg + Math.floor(Math.random() * 5));
-}
-
-emit(snake: SnakeState, type: EventType, pos: { x: number, y: number }, terrain: any, tags: string[], amount ?: number, targetId ?: string) {
-    this.events.push({
-        id: Math.random().toString(36).substr(2, 9),
-        tick: this.tick,
-        snakeId: snake.id,
-        type,
-        pos,
-        terrain: terrain as any,
-        targetId,
-        amount,
-        tags,
-        snapshot: {
-            hp: snake.hp,
-            effectiveStats: { ...snake.currentStats },
-            aiState: snake.aiState,
-            flags: [...snake.flags]
-        }
-    });
-}
-
-emitGlobal(type: EventType, pos: { x: number, y: number }, terrain: any, tags: string[]) {
-    this.events.push({
-        id: Math.random().toString(36).substr(2, 9),
-        tick: this.tick,
-        snakeId: 'SYSTEM',
-        type,
-        pos,
-        terrain: terrain as any,
-        tags,
-        snapshot: {
-            hp: 0,
-            effectiveStats: { speed: 0, size: 0, venom: 0, agility: 0, camouflage: 0 },
-            aiState: 'none',
-            flags: []
-        }
-    });
-}
 }

@@ -24,7 +24,7 @@ export function runBattle(
     return {
         world,
         events,
-        narrative: generateNarrative(events, snakes),
+        narrative: generateNarrative(events, snakes, params),
         snakes
     };
 }

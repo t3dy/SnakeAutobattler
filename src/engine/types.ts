@@ -1,23 +1,21 @@
+export type EngineVersion = 'v1.0' | 'v2.0' | 'v3.0' | 'v4.0' | 'v5.0';
+export type GameState = 'landing' | 'mode_select' | 'env_draft' | 'draft' | 'battle' | 'recap';
 export type TerrainType = 'forest' | 'desert' | 'river' | 'mountain';
-
-export type Climate = 'Tropical' | 'Arid' | 'Alpine' | 'Standard';
-export type Density = 'High' | 'Sparse' | 'Standard' | 'Dense' | 'Barren';
-
-export type GameMode = 'SOLO' | 'HOTSEAT_BATTLE' | 'HOTSEAT_COOP';
+export type Mode = 'SOLO' | 'HOTSEAT_BATTLE' | 'HOTSEAT_COOP';
 export type Theme = 'MEDIEVAL' | 'SCIFI';
 
 export interface EnvironmentParams {
-    climate: Climate;
-    fauna: Density;
-    flora: Density;
-    mode: GameMode;
-    theme: Theme;
+    climate: string;
+    fauna: string;
+    flora: string;
+    mode?: Mode;
+    theme?: Theme;
 }
 
 export interface Cell {
     terrain: TerrainType;
-    food: { kind: string; value: number } | null;
-    hazard: { kind: string; damage: number } | null;
+    food: { kind: string, value: number } | null;
+    hazard: { kind: string, damage: number } | null;
     x: number;
     y: number;
 }
@@ -30,19 +28,12 @@ export interface Stats {
     camouflage: number;
 }
 
-export type BodyType = 'Boulderback Constrictor' | 'Shadow Striker' | 'Dune Sprinter' | 'River Glider';
-export type InstinctType = 'Hunter' | 'Scavenger' | 'Territorial' | 'Opportunist';
-export type AffinityType = 'Forest-Bonded' | 'Desert-Born' | 'River-Blooded' | 'Stone-Scaled';
-export type QuirkType = 'Reckless' | 'Cautious' | 'Voracious' | 'Paranoid';
-
 export interface SnakeDraft {
-    body: BodyType;
-    instinct: InstinctType;
-    affinity: AffinityType;
-    quirk: QuirkType;
+    body: string;
+    instinct: string;
+    affinity: string;
+    quirk: string;
 }
-
-export type NarrativeFlag = 'WOUNDED' | 'DOMINANT' | 'PANICKED' | 'WELL_FED' | 'SCARRED' | 'HEROIC' | 'SACRIFICED' | 'ASCENDED';
 
 export interface SnakeState {
     id: string;
@@ -50,43 +41,41 @@ export interface SnakeState {
     team: 'player' | 'enemy';
     hp: number;
     maxHp: number;
-    pos: { x: number; y: number };
+    pos: { x: number, y: number };
     draft: SnakeDraft;
     baseStats: Stats;
     currentStats: Stats;
-    aiState: 'searching' | 'engaging' | 'retreating' | 'patrolling' | 'feeding';
+    aiState: 'searching' | 'attacking' | 'fleeing' | 'eating' | 'hunting';
     alive: boolean;
-    inventory: any[];
+    inventory: string[];
     statuses: string[];
     flags: NarrativeFlag[];
     memory: {
-        hazards: { x: number; y: number }[];
-        food: { x: number; y: number }[];
-        enemies: { x: number; y: number }[];
+        hazards: { x: number, y: number }[];
+        food: { x: number, y: number }[];
+        enemies: string[];
     };
-    evolution: Partial<Stats>;
+    evolution: Record<string, number>;
     experience: number;
     honor: number;
-    gear: { name: string; type: string; bonus: Partial<Stats> }[];
+    gear: string[];
+    scavengeProfit: number;
 }
 
 export type EventType =
-    | 'MOVE' | 'ENTER_TILE' | 'FOOD_FOUND' | 'FOOD_EAT'
-    | 'HAZARD_SPOTTED' | 'HAZARD_HIT' | 'COMBAT_START'
-    | 'COMBAT_TICK' | 'COMBAT_EXCHANGE' | 'TURNING_POINT' | 'COMBAT_END' | 'RETREAT' | 'KO'
-    | 'STATUS_GAIN' | 'STATUS_LOSE' | 'CLAIM_TERRITORY'
-    | 'PATROL' | 'AMBUSH' | 'DISCOVER' | 'TRACKING' | 'BATTLE_END'
-    | 'STORM_ADVANCE' | 'SACRIFICE' | 'FEAT_ACCOMPLISHED' | 'LEVEL_UP' | 'GEAR_EQUIP';
+    | 'MOVE' | 'ATTACK' | 'DAMAGE' | 'KO' | 'FOOD_EAT' | 'HAZARD_HIT'
+    | 'BATTLE_START' | 'BATTLE_END' | 'STORM_ADVANCE' | 'COMBAT_START' | 'COMBAT_EXCHANGE' | 'COMBAT_END' | 'TURNING_POINT' | 'ENTER_TILE' | 'COMBAT_TICK'
+    | 'SACRIFICE' | 'FEAT_ACCOMPLISHED' | 'LEVEL_UP' | 'GEAR_EQUIP' | 'ENCOUNTER_CHOICE' | 'ENCOUNTER_RESULT' | 'PHASE_SHIFT';
 
 export interface GameEvent {
     id: string;
     tick: number;
     snakeId: string;
     type: EventType;
-    pos: { x: number; y: number };
+    pos: { x: number, y: number };
     terrain: TerrainType;
-    targetId?: string | null;
-    amount?: number | null;
+    targetId?: string;
+    amount?: number;
     tags: string[];
     snapshot: {
         hp: number;
@@ -95,3 +84,5 @@ export interface GameEvent {
         flags: NarrativeFlag[];
     };
 }
+
+export type NarrativeFlag = 'WOUNDED' | 'DOMINANT' | 'WELL_FED' | 'DESPERATE' | 'HEROIC';

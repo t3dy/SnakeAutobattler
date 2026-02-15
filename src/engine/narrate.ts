@@ -1,111 +1,88 @@
-import { GameEvent, SnakeState } from './types';
-import { BODIES, INSTINCTS, AFFINITIES, QUIRKS } from './traits';
-
-export function generateNarrative(events: GameEvent[], snakes: SnakeState[]) {
-    const recap = generateDramaticRecap(events, snakes);
+export function generateNarrative(events: GameEvent[], snakes: SnakeState[], params?: EnvironmentParams) {
+    const theme = params?.theme || 'MEDIEVAL';
+    const recap = generateDramaticRecap(events, snakes, theme);
     const snakeStories = snakes.map(snake => ({
         name: snake.name,
-        bio: generateOriginBio(snake),
-        story: compileStoryArcs(events.filter(e => e.snakeId === snake.id), snake, events)
+        bio: generateOriginBio(snake, theme),
+        story: compileStoryArcs(events.filter(e => e.snakeId === snake.id), snake, events, theme)
     }));
 
     return { recap, snakeStories };
 }
 
-function generateOriginBio(snake: SnakeState) {
+function generateOriginBio(snake: SnakeState, theme: Theme) {
     const d = snake.draft;
-    return `${BODIES[d.body].description} ${INSTINCTS[d.instinct].description} ${AFFINITIES[d.affinity].description} [Strategy: ${BODIES[d.body].strategy} ${INSTINCTS[d.instinct].strategy}]`;
+    const prefix = theme === 'SCIFI' ? 'Model' : 'Vested';
+    return `${prefix} ${snake.name}: ${BODIES[d.body].description} ${INSTINCTS[d.instinct].description} ${AFFINITIES[d.affinity].description}.`;
 }
 
-function generateDramaticRecap(events: GameEvent[], snakes: SnakeState[]) {
+function generateDramaticRecap(events: GameEvent[], snakes: SnakeState[], theme: Theme) {
     const kos = events.filter(e => e.type === 'KO');
-    const stormTicks = events.filter(e => e.type === 'STORM_ADVANCE').length;
-    const highestEvolution = [...snakes].sort((a, b) =>
-        Object.values(b.evolution).reduce((s, v) => s + (v || 0), 0) -
-        Object.values(a.evolution).reduce((s, v) => s + (v || 0), 0)
-    )[0];
-
+    const phaseShift = events.find(e => e.type === 'PHASE_SHIFT');
     const winners = snakes.filter(s => s.alive && s.team === 'player');
-    const survivorCount = snakes.filter(s => s.alive).length;
 
-    let story = `The arena became a crucible of survival. `;
-    if (stormTicks > 0) story += `The narrowing boundaries of the storm claimed the weak, forcing the remaining ${survivorCount} snakes into a final, bloody convergence. `;
+    let story = theme === 'SCIFI'
+        ? "The digital arena flickered with the data-ghosts of fallen units. "
+        : "The chronicle of this land is written in the shed skin and spilled venom of its champions. ";
 
-    if (kos.length > 3) {
-        story += `It was a massacre, with fatalities occurring in almost every biome. `;
-    } else {
-        story += `Territorial posturing dominated most of the encounter, with few direct kills. `;
+    if (phaseShift) {
+        story += theme === 'SCIFI'
+            ? "Entry into the CLASH protocol forced all sub-routines into a terminal convergence. "
+            : "The horn of the Clash sounded, ending the scavenge and demanding blood for the soil. ";
     }
 
-    if (highestEvolution) {
-        story += `${highestEvolution.name} showed the most significant growth, adapting rapidly to the environment. `;
-    }
-
-    story += winners.length > 0 ? "Against all odds, your brood held the territory." : "The wild reclaim the land; your team has fallen.";
+    story += winners.length > 0 ? "Unity prevailed; the brood claims the record." : "The cycle resets, leaving only static and dust.";
 
     return story;
 }
 
-/**
- * Story Compiler v4.0
- * Group events into dramatic beats instead of 1-1 mapping.
- */
-function compileStoryArcs(snakeEvents: GameEvent[], snake: SnakeState, allEvents: GameEvent[]) {
-    if (snakeEvents.length === 0) return "A shadow in the undergrowth, it left no trace.";
+function compileStoryArcs(snakeEvents: GameEvent[], snake: SnakeState, allEvents: GameEvent[], theme: Theme) {
+    if (snakeEvents.length === 0) return { text: "A shadow in the undergrowth...", visualPrompt: "A sleek snake hidden in thick fog" };
 
-    const arcs: string[] = [];
-    const drafts = snake.draft;
+    const arcs: { text: string, visualPrompt: string }[] = [];
+    const isSciFi = theme === 'SCIFI';
 
-    // 1. Exploration Arc (Biomes)
-    const exploredBiomes = Array.from(new Set(snakeEvents.map(e => e.terrain))).slice(0, 3);
-    if (exploredBiomes.length > 1) {
-        arcs.push(`${snake.name} traversed from the ${exploredBiomes[0]} to the ${exploredBiomes[1]}, displaying its ${drafts.body.split(' ')[0]} endurance.`);
+    // 1. Scavenge Arc
+    const encounters = snakeEvents.filter(e => e.type === 'ENCOUNTER_RESULT');
+    if (encounters.length > 0) {
+        const victory = encounters.some(e => e.tags.includes('VICTORY'));
+        const text = victory
+            ? (isSciFi ? `System override successful. The unit integrated high-value components.` : `By the grace of the Sigil, the serpent claimed the spoils of the ancient altar.`)
+            : (isSciFi ? `Critical failure. Ambushed by rogue security bots.` : `The Alchemist's trap was sprung; blood was shed for nothing.`);
+        arcs.push({
+            text,
+            visualPrompt: isSciFi ? "A robotic snake hacking a glowing terminal" : "A knightly snake bowing before a stone altar"
+        });
     }
 
-    // 2. Conflict/Combat Arc (Summarize all fights)
+    // 2. Clash Arc
     const fights = snakeEvents.filter(e => e.type === 'COMBAT_START');
     if (fights.length > 0) {
-        const uniqueFoes = Array.from(new Set(fights.map(f => f.targetId)));
-        let fightStory = `The scent of ${uniqueFoes.length} rivals kept it on high alert. `;
-
-        const turningPoints = snakeEvents.filter(e => e.type === 'TURNING_POINT');
-        if (turningPoints.length > 0) {
-            fightStory += `In one desperate clash, the tide of battle shifted violently. `;
-        }
-
-        const kills = allEvents.filter(e => e.type === 'KO' && e.targetId === snake.id && e.tags.some(t => t.includes(`slain_by`)));
-        if (kills.length > 0) {
-            fightStory += `It asserted its dominance through raw force, claiming its place in the hierarchy. `;
-        }
-
-        arcs.push(fightStory);
+        const text = isSciFi
+            ? `Laser-sight locked on targets. The ${snake.name} engaged in multi-threaded combat.`
+            : `Fangs bared in the mud of the Clash. The ${snake.name} entered the fray with noble intent.`;
+        arcs.push({
+            text,
+            visualPrompt: isSciFi ? "Two cybernetic snakes fighting with neon energy coils" : "Two giant snakes coiled in a muddy battlefield"
+        });
     }
 
-    // 3. Survival/Hazard Arc
-    const hazards = snakeEvents.filter(e => e.type === 'HAZARD_HIT');
-    if (hazards.length > 2) {
-        arcs.push(`The environment itself seemed to reject its presence; it limped through a series of brutal accidents.`);
-    } else if (hazards.length > 0) {
-        arcs.push(`It narrowly survived the ${hazards[0].tags[0] || 'hazards'} of the ${hazards[0].terrain}.`);
-    }
-
-    // 4. Memory/Evolution Arc
-    const foods = snakeEvents.filter(e => e.type === 'FOOD_EAT');
-    if (foods.length > 1) {
-        arcs.push(`${snake.name} utilized its ${drafts.instinct} instincts to locate vital caches, growing stronger with every meal.`);
-    }
-
-    // 5. Final Fate
+    // 3. Final Fate
     const ko = snakeEvents.find(e => e.type === 'KO');
     if (ko) {
-        if (ko.tags.some(t => t.includes('hazard'))) {
-            arcs.push(`Finally, the relentless pressures of the ${ko.terrain} proved too much; it succumbed to the world itself.`);
-        } else {
-            arcs.push(`Worn down by rival fangs, its journey ended beneath the ${ko.terrain} sky.`);
-        }
+        arcs.push({
+            text: isSciFi ? "Unit de-rezzed. Data uploaded to the cloud." : "The knight falls. May his scales line the throne of he who follows.",
+            visualPrompt: isSciFi ? "A digital glitch effect in the shape of a snake" : "A broken snake crown resting on a mountain peak"
+        });
     } else {
-        arcs.push(`Against the thinning storm, it remained unyielding, a true survivor of the saga.`);
+        arcs.push({
+            text: isSciFi ? "The ghost remains in the machine." : "He stands as a monolith of the era.",
+            visualPrompt: "A majestic snake overlooking a vast, conquered landscape"
+        });
     }
 
-    return arcs.join(' ');
+    return {
+        fullStory: arcs.map(a => a.text).join(' '),
+        visuals: arcs
+    };
 }
