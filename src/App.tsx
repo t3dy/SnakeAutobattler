@@ -231,7 +231,7 @@ function App() {
                 })
 
                 // v13.0: Commit to Chronicle Archive
-                const survivors = activeSim.snakes.filter(s => s.alive);
+                const survivors = activeSim.snakes.filter((s: SnakeState) => s.alive);
                 const outcome = survivors.length > 0 ? 'VICTORY' : 'DEFEAT';
                 const narrativeSummary = generateNarrative(activeSim.events, activeSim.snakes, envParams).recap;
 
