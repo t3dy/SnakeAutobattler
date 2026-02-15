@@ -89,6 +89,8 @@ export class Simulation {
             // Must run every tick to audit all events (Combat, Movement, Hazards)
             this.radiance.update(this.events.filter(e => e.tick === this.tick), this.snakes);
         }
+
+        this.tick++; // v15.0 STALL FIX: Ensure time moves forward
     }
 
     // Two blank lines for separation

@@ -544,7 +544,7 @@ function App() {
                 )}
 
                 {/* v13.1 Lucid Loop: Radiance HUD */}
-                {activeSim && (gameState === 'battle' || gameState === 'cinematic_video') && (
+                {activeSim && engineVersion !== 'v15.0' && (gameState === 'battle' || gameState === 'cinematic_video') && (
                     <RadianceDisplay radiance={activeSim.radiance} />
                 )}
 
