@@ -6,7 +6,7 @@ import { SnakeDraft, BodyType, InstinctType, AffinityType, QuirkType, Environmen
 import Arena from './components/Arena'
 import { generateNarrative } from './engine/narrate'
 
-type EngineVersion = 'v1.0' | 'v2.0' | 'v3.0' | 'v4.0' | 'v5.0' | 'v6.0';
+type EngineVersion = 'v1.0' | 'v2.0' | 'v3.0' | 'v4.0' | 'v5.0' | 'v6.0' | 'v7.0';
 
 function App() {
     const [gameState, setGameState] = useState<any>('landing')
@@ -157,10 +157,10 @@ function App() {
                     <div className="landing-screen">
                         <h2>ARCHIVE HUB</h2>
                         <div className="version-grid">
-                            {['v1.0', 'v2.0', 'v3.0', 'v4.0', 'v5.0', 'v6.0'].map(v => (
-                                <button key={v} className={`version-btn ${v === 'v6.0' ? 'v5-highlight' : ''}`} onClick={() => selectVersion(v as any)}>
+                            {['v1.0', 'v2.0', 'v3.0', 'v4.0', 'v5.0', 'v6.0', 'v7.0'].map(v => (
+                                <button key={v} className={`version-btn ${v === 'v6.0' ? 'v5-highlight' : ''} ${v === 'v7.0' ? 'v7-locked' : ''}`} onClick={() => v !== 'v7.0' && selectVersion(v as any)}>
                                     <strong>{v}</strong>
-                                    <span>{v === 'v6.0' ? 'MERCHANT' : 'LEGACY'}</span>
+                                    <span>{v === 'v6.0' ? 'MERCHANT' : v === 'v7.0' ? 'GHOST (PLANNED)' : 'LEGACY'}</span>
                                 </button>
                             ))}
                         </div>

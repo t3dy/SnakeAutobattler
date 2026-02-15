@@ -1,4 +1,4 @@
-export type EngineVersion = 'v1.0' | 'v2.0' | 'v3.0' | 'v4.0' | 'v5.0' | 'v6.0';
+export type EngineVersion = 'v1.0' | 'v2.0' | 'v3.0' | 'v4.0' | 'v5.0' | 'v6.0' | 'v7.0';
 export type GameState = 'landing' | 'mode_select' | 'env_draft' | 'draft' | 'battle' | 'recap';
 export type TerrainType = 'forest' | 'desert' | 'river' | 'mountain';
 export type Mode = 'SOLO' | 'HOTSEAT_BATTLE' | 'HOTSEAT_COOP';
