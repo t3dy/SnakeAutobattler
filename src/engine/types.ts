@@ -1,10 +1,9 @@
-export type EngineVersion = 'v1.0' | 'v2.0' | 'v3.0' | 'v4.0' | 'v5.0';
+export type EngineVersion = 'v1.0' | 'v2.0' | 'v3.0' | 'v4.0' | 'v5.0' | 'v6.0';
 export type GameState = 'landing' | 'mode_select' | 'env_draft' | 'draft' | 'battle' | 'recap';
 export type TerrainType = 'forest' | 'desert' | 'river' | 'mountain';
 export type Mode = 'SOLO' | 'HOTSEAT_BATTLE' | 'HOTSEAT_COOP';
 export type Theme = 'MEDIEVAL' | 'SCIFI';
 
-// Restoring missing types needed by other files
 export type BodyType = string;
 export type InstinctType = string;
 export type AffinityType = string;
@@ -66,12 +65,14 @@ export interface SnakeState {
     honor: number;
     gear: string[];
     scavengeProfit: number;
+    storyHistory: string[];
 }
 
 export type EventType =
     | 'MOVE' | 'ATTACK' | 'DAMAGE' | 'KO' | 'FOOD_EAT' | 'HAZARD_HIT'
     | 'BATTLE_START' | 'BATTLE_END' | 'STORM_ADVANCE' | 'COMBAT_START' | 'COMBAT_EXCHANGE' | 'COMBAT_END' | 'TURNING_POINT' | 'ENTER_TILE' | 'COMBAT_TICK'
-    | 'SACRIFICE' | 'FEAT_ACCOMPLISHED' | 'LEVEL_UP' | 'GEAR_EQUIP' | 'ENCOUNTER_CHOICE' | 'ENCOUNTER_RESULT' | 'PHASE_SHIFT';
+    | 'SACRIFICE' | 'FEAT_ACCOMPLISHED' | 'LEVEL_UP' | 'GEAR_EQUIP' | 'ENCOUNTER_CHOICE' | 'ENCOUNTER_RESULT' | 'PHASE_SHIFT'
+    | 'PENDING_CHOICE' | 'CHOICE_MADE';
 
 export interface GameEvent {
     id: string;

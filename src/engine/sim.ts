@@ -18,17 +18,24 @@ export class Simulation {
         this.envParams = envParams;
     }
 
+    isWaitingForChoice: boolean = false;
+    pendingChoiceEvent: GameEvent | null = null;
+
     run(): GameEvent[] {
-        while (this.tick < this.maxTicks && this.snakes.some(s => s.alive)) {
+        // In v6.0, run() only continues if not waiting for choice
+        while (this.tick < this.maxTicks && this.snakes.some(s => s.alive) && !this.isWaitingForChoice) {
             this.step();
-            this.tick++;
+            if (!this.isWaitingForChoice) this.tick++;
         }
-        this.emitGlobal('BATTLE_END', { x: 0, y: 0 }, 'forest', ['battle_concluded']);
+        if (!this.snakes.some(s => s.alive) || this.tick >= this.maxTicks) {
+            this.emitGlobal('BATTLE_END', { x: 0, y: 0 }, 'forest', ['battle_concluded']);
+        }
         return this.events;
     }
 
     step() {
-        const isV5 = this.envParams.mode !== undefined;
+        const isV5 = this.envParams.mode !== undefined; // mode select was v5.0
+        const isV6 = this.envParams.mode === 'SOLO' || this.envParams.mode === 'HOTSEAT_BATTLE'; // v6.0 applies to all main modes
         const phaseTick = 30;
 
         if (this.tick === phaseTick && isV5) {
@@ -41,11 +48,27 @@ export class Simulation {
             this.advanceStorm();
         }
 
-        this.snakes.filter(s => s.alive).forEach(snake => {
+        const snakesToUpdate = this.snakes.filter(s => s.alive);
+        for (const snake of snakesToUpdate) {
             this.updateSnake(snake, isClash);
-        });
+            if (this.isWaitingForChoice) break; // Pause simulation
+        }
 
-        this.resolveCombat();
+        if (!this.isWaitingForChoice) {
+            this.resolveCombat();
+        }
+    }
+
+    // New API for external choice injection
+    handleChoice(snakeId: string, choice: 'RUN' | 'HIDE' | 'FIGHT') {
+        const snake = this.snakes.find(s => s.id === snakeId);
+        if (!snake || !this.isWaitingForChoice) return;
+
+        this.isWaitingForChoice = false;
+        this.emit(snake, 'CHOICE_MADE', snake.pos, this.world[snake.pos.y][snake.pos.x].terrain, [choice]);
+
+        // Resolve the choice logic
+        this.resolveEncounterChoice(snake, choice);
     }
 
     advanceStorm() {
@@ -91,25 +114,44 @@ export class Simulation {
     }
 
     triggerEncounter(snake: SnakeState, cell: Cell) {
+        // In v6.0, we pause and wait for player input
+        this.isWaitingForChoice = true;
+        this.emit(snake, 'PENDING_CHOICE', snake.pos, cell.terrain, ['encounter']);
+    }
+
+    resolveEncounterChoice(snake: SnakeState, choice: 'RUN' | 'HIDE' | 'FIGHT') {
+        const cell = this.world[snake.pos.y][snake.pos.x];
         const theme = this.envParams.theme;
-        const choices = theme === 'MEDIEVAL'
-            ? ['Charge the Outpost', 'Pray at the Altar', 'Salvage the Wreckage']
-            : ['Hack the Terminal', 'Search the Pod', 'Engage the Auto-Turret'];
+        let outcome = '';
 
-        const choice = choices[Math.floor(Math.random() * choices.length)];
-        this.emit(snake, 'ENCOUNTER_CHOICE', snake.pos, cell.terrain, [choice]);
-
-        const roll = Math.random() * 20 + (snake.currentStats.agility + snake.currentStats.size);
-        if (roll > 25) {
-            snake.experience += 20;
-            snake.honor += 10;
-            snake.scavengeProfit += 50;
-            this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['VICTORY', 'Gained Profit & XP']);
+        if (choice === 'RUN') {
+            outcome = theme === 'SCIFI' ? 'The unit engaged thrusters, escaping the logic gate.' : 'He turned tail, slithering into the deep crevices.';
+            this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['ESCAPE', outcome]);
+        } else if (choice === 'HIDE') {
+            const roll = Math.random() * 20 + snake.currentStats.agility;
+            if (roll > 15) {
+                outcome = theme === 'SCIFI' ? 'Stealth protocols held. The threat passed over.' : 'Shadows became his armor; the danger did not see him.';
+                this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['STAY_HIDDEN', outcome]);
+            } else {
+                outcome = theme === 'SCIFI' ? 'Cloaking failed! Forced into an immediate engagement.' : 'The stones rolled under his weight, revealing his presence!';
+                snake.hp -= 20;
+                this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['REVEALED', outcome]);
+            }
         } else {
-            snake.hp -= 15;
-            snake.honor -= 5;
-            this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['FAILURE', 'Ambushed!']);
+            // FIGHT
+            const roll = Math.random() * 20 + (snake.currentStats.venom + snake.currentStats.size);
+            if (roll > 20) {
+                snake.experience += 30;
+                snake.scavengeProfit += 100;
+                outcome = theme === 'SCIFI' ? 'Core Overload victory! Salvaged high-tier hardware.' : 'A roar echoed in the glade. The foe was vanquished, its gold claimed.';
+                this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['VICTORY', outcome]);
+            } else {
+                snake.hp -= 30;
+                outcome = theme === 'SCIFI' ? 'Hardware damage sustained. Retreating with sub-optimal data.' : 'The battle was a calamity. He crawled away, broken and shamed.';
+                this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['DEFEAT', outcome]);
+            }
         }
+        if (outcome) snake.storyHistory.push(outcome);
     }
 
     updateFlags(snake: SnakeState) {
@@ -231,8 +273,8 @@ export class Simulation {
         return Math.max(2, dmg + Math.floor(Math.random() * 5));
     }
 
-    emit(snake: SnakeState, type: EventType, pos: { x: number, y: number }, terrain: TerrainType, tags: string[], amount?: number, targetId?: string) {
-        this.events.push({
+    emit(snake: SnakeState, type: EventType, pos: { x: number, y: number }, terrain: TerrainType, tags: string[], amount?: number, targetId?: string): GameEvent {
+        const event: GameEvent = {
             id: Math.random().toString(36).substr(2, 9),
             tick: this.tick,
             snakeId: snake.id,
@@ -248,7 +290,9 @@ export class Simulation {
                 aiState: snake.aiState,
                 flags: [...snake.flags]
             }
-        });
+        };
+        this.events.push(event);
+        return event;
     }
 
     emitGlobal(type: EventType, pos: { x: number, y: number }, terrain: TerrainType, tags: string[]) {

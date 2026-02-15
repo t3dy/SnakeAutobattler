@@ -25,7 +25,8 @@ export function runBattle(
         world,
         events,
         narrative: generateNarrative(events, snakes, params),
-        snakes
+        snakes,
+        sim // Exposing sim to App.tsx for choice interaction
     };
 }
 
