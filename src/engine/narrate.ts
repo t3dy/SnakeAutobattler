@@ -1,13 +1,20 @@
 import { GameEvent, SnakeState } from './types';
+import { BODIES, INSTINCTS, AFFINITIES, QUIRKS } from './traits';
 
 export function generateNarrative(events: GameEvent[], snakes: SnakeState[]) {
     const recap = generateRecap(events, snakes);
     const snakeStories = snakes.map(snake => ({
         name: snake.name,
+        bio: generateOriginBio(snake),
         story: generateSnakeStory(events.filter(e => e.snakeId === snake.id), snake)
     }));
 
     return { recap, snakeStories };
+}
+
+function generateOriginBio(snake: SnakeState) {
+    const d = snake.draft;
+    return `${BODIES[d.body].description} ${INSTINCTS[d.instinct].description} ${AFFINITIES[d.affinity].description} Notably, it is ${QUIRKS[d.quirk].description.toLowerCase()}`;
 }
 
 function generateRecap(events: GameEvent[], snakes: SnakeState[]) {
@@ -27,8 +34,7 @@ function generateSnakeStory(events: GameEvent[], snake: SnakeState) {
     const blocks: string[] = [];
     let currentTerrain = '';
 
-    events.forEach((event, i) => {
-        // Group by terrain shifts or major events
+    events.forEach((event) => {
         if (event.terrain !== currentTerrain) {
             currentTerrain = event.terrain;
             blocks.push(`Entering the ${event.terrain}, ${snake.name} ${getTerrainVerb(event.terrain, snake)}.`);
@@ -36,28 +42,24 @@ function generateSnakeStory(events: GameEvent[], snake: SnakeState) {
 
         switch (event.type) {
             case 'FOOD_EAT':
-                blocks.push(`It discovered a ${event.tags[1]} 🍎 and fed hungrily, recovering some vitality.`);
+                blocks.push(getFoodFlavor(snake, event));
                 break;
             case 'HAZARD_HIT':
-                blocks.push(`Disaster struck! It stumbled into a ${event.tags[1]} ⚠️ and was badly hurt.`);
+                blocks.push(getHazardFlavor(snake, event));
                 break;
             case 'COMBAT_START':
-                blocks.push(`A rival was spotted nearby. Combat was unavoidable.`);
+                blocks.push(getCombatStartFlavor(snake, event));
                 break;
             case 'COMBAT_TICK':
-                // Only log every few ticks or major damage
                 if (event.amount && event.amount > 5) {
-                    blocks.push(`It struck hard, dealing significant damage to its foe.`);
+                    blocks.push(getCombatTickFlavor(snake, event));
                 }
                 break;
             case 'RETREAT':
-                blocks.push(`Wounded and weary, it managed to slip away from the confrontation.`);
+                blocks.push(getRetreatFlavor(snake, event));
                 break;
             case 'KO':
-                blocks.push(`The struggle proved too much. ${snake.name} finally went still.`);
-                break;
-            case 'TURNING_POINT':
-                blocks.push(`A moment of desperation! ${snake.name} surged with a final burst of energy.`);
+                blocks.push(`${snake.name} finally went still, its journey ending in the ${event.terrain}.`);
                 break;
         }
     });
@@ -67,7 +69,7 @@ function generateSnakeStory(events: GameEvent[], snake: SnakeState) {
 
 function getTerrainVerb(terrain: string, snake: SnakeState): string {
     const affinity = snake.draft.affinity;
-    if (affinity.includes(terrain.split('-')[0])) return "felt right at home";
+    if (AFFINITIES[affinity].terrain === terrain) return "felt a surge of power, fully at home in its element";
 
     switch (terrain) {
         case 'forest': return "slithered through the thick undergrowth";
@@ -76,4 +78,37 @@ function getTerrainVerb(terrain: string, snake: SnakeState): string {
         case 'mountain': return "carefully navigated the jagged rocks";
         default: return "moved cautiously";
     }
+}
+
+function getFoodFlavor(snake: SnakeState, event: GameEvent): string {
+    const quirk = snake.draft.quirk;
+    if (quirk === 'Voracious') return `Driven by an insatiable hunger, it tore into the ${event.tags[1]} 🍎, barely pausing to breathe.`;
+    return `It discovered a ${event.tags[1]} 🍎 and fed, its movements briefly slowing as it digested the meal.`;
+}
+
+function getHazardFlavor(snake: SnakeState, event: GameEvent): string {
+    const quirk = snake.draft.quirk;
+    if (quirk === 'Reckless') return `Ignoring the warning signs, it charged straight into a ${event.tags[1]} ⚠️. The impact was brutal.`;
+    if (quirk === 'Cautious') return `Despite its best efforts to stay safe, it was caught by a hidden ${event.tags[1]} ⚠️.`;
+    return `It stumbled into a ${event.tags[1]} ⚠️ and was badly hurt.`;
+}
+
+function getCombatStartFlavor(snake: SnakeState, event: GameEvent): string {
+    const instinct = snake.draft.instinct;
+    if (instinct === 'Hunter') return `Scenting an intruder, it coiled and launched an aggressive assault before the rival could react.`;
+    if (instinct === 'Territorial') return `A rival dared to enter its domain. It hissed a warning and prepared to defend its ground.`;
+    return `A rival was spotted nearby. Combat was unavoidable.`;
+}
+
+function getCombatTickFlavor(snake: SnakeState, event: GameEvent): string {
+    const body = snake.draft.body;
+    if (body === 'Boulderback Constrictor') return `It used its massive weight to crush its foe, scales grinding against scales.`;
+    if (body === 'Shadow Striker') return `A flash of movement, followed by the insertion of needle-sharp fangs.`;
+    return `It struck hard, dealing significant damage to its foe.`;
+}
+
+function getRetreatFlavor(snake: SnakeState, event: GameEvent): string {
+    const quirk = snake.draft.quirk;
+    if (quirk === 'Paranoid') return `Fearing the worst, it broke off the engagement and vanished into the brush before things could turn fatal.`;
+    return `Wounded and weary, it managed to slip away from the confrontation.`;
 }

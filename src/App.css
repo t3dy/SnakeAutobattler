@@ -1,7 +1,14 @@
+body {
+    background-color: #0a0a0a;
+    color: #33ff33;
+    font-family: 'Courier New', Courier, monospace;
+}
+
 .app-container {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+    text-align: center;
 }
 
 .draft-screen,
@@ -14,7 +21,67 @@
 }
 
 h1 {
-    font-size: 2rem;
+    font-size: 2.5rem;
     margin-bottom: 20px;
     text-shadow: 0 0 10px #33ff33;
+}
+
+.option-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 300px;
+    margin: 20px auto;
+}
+
+button {
+    background: transparent;
+    border: 1px solid #33ff33;
+    color: #33ff33;
+    padding: 10px 20px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+button:hover {
+    background: #33ff33;
+    color: #000;
+}
+
+.snake-stories {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 30px;
+    text-align: left;
+}
+
+.snake-story-box {
+    border: 1px solid #33ff33;
+    padding: 15px;
+    font-size: 0.8rem;
+    line-height: 1.6;
+}
+
+.snake-bio {
+    font-size: 0.75rem;
+    color: #88ff88;
+    border-bottom: 1px solid #33ff3344;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+}
+
+.battle-recap-text {
+    font-size: 1.2rem;
+    background: #33ff33;
+    color: #000;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.current-snake-preview {
+    margin-top: 20px;
+    font-size: 0.7rem;
+    opacity: 0.8;
 }

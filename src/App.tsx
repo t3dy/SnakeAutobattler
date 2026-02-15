@@ -78,6 +78,7 @@ function App() {
                             {battleResult.narrative.snakeStories.map((s: any, i: number) => (
                                 <div key={i} className="snake-story-box">
                                     <h3>{s.name}</h3>
+                                    <p className="snake-bio"><em>{s.bio}</em></p>
                                     <p>{s.story}</p>
                                 </div>
                             ))}
