@@ -1,13 +1,13 @@
-import { GameEvent, SnakeState, EnvironmentParams, Theme } from './types';
+import { GameEvent, SnakeState, EnvironmentParams, Theme, CauseType } from './types';
 import { BODIES, INSTINCTS, AFFINITIES, QUIRKS } from './traits';
 
 export function generateNarrative(events: GameEvent[], snakes: SnakeState[], params?: EnvironmentParams) {
     const theme = params?.theme || 'MEDIEVAL';
-    const recap = generateDramaticRecap(events, snakes, theme);
+    const recap = generateSurgicalRecap(events, snakes, theme);
     const snakeStories = snakes.map(snake => ({
         name: snake.name,
         bio: generateOriginBio(snake, theme),
-        story: compileStoryArcs(events.filter(e => e.snakeId === snake.id), snake, events, theme)
+        story: compileCausalArcs(events.filter(e => e.snakeId === snake.id), snake, events, theme)
     }));
 
     return { recap, snakeStories };
@@ -19,68 +19,94 @@ function generateOriginBio(snake: SnakeState, theme: Theme) {
     return `${prefix} ${snake.name}: ${BODIES[d.body].description} ${INSTINCTS[d.instinct].description} ${AFFINITIES[d.affinity].description}.`;
 }
 
-function generateDramaticRecap(events: GameEvent[], snakes: SnakeState[], theme: Theme) {
-    const kos = events.filter(e => e.type === 'KO');
-    const phaseShift = events.find(e => e.type === 'PHASE_SHIFT');
-    const winners = snakes.filter(s => s.alive && s.team === 'player');
+function generateSurgicalRecap(events: GameEvent[], snakes: SnakeState[], theme: Theme) {
+    const survivors = snakes.filter(s => s.alive);
+    const playerSurvivors = survivors.filter(s => s.team === 'player');
+    const enemySurvivors = survivors.filter(s => s.team === 'enemy');
+    const isSciFi = theme === 'SCIFI';
 
-    let story = theme === 'SCIFI'
-        ? "The digital arena flickered with the data-ghosts of fallen units. "
-        : "The chronicle of this land is written in the shed skin and spilled venom of its champions. ";
-
-    if (phaseShift) {
-        story += theme === 'SCIFI'
-            ? "Entry into the CLASH protocol forced all sub-routines into a terminal convergence. "
-            : "The horn of the Clash sounded, ending the scavenge and demanding blood for the soil. ";
+    let tone = "";
+    if (survivors.length === 0) {
+        tone = isSciFi
+            ? "TOTAL SYSTEM COLLAPSE. All units de-rezzed. The grid is silent."
+            : "MUTUAL EXTINCTION. The soil drank too much; no champion remains to claim the throne.";
+    } else if (playerSurvivors.length > 0 && enemySurvivors.length === 0) {
+        tone = isSciFi
+            ? "TOTAL DOMINATION. Enemy sub-routines purged. Blue team synchronization optimal."
+            : "ABSOLUTE TRIUMPH. The enemy brood lies broken. Honor is satisfied.";
+    } else if (survivors.length === 1 && survivors[0].hp < 25) {
+        tone = isSciFi
+            ? "FRAGILE SURVIVAL. A lone unit remains, hardware smoking, data corrupted."
+            : "SOLEMN VICTORY. A single survivor crawls from the wreckage, scarred and staggering.";
+    } else {
+        tone = isSciFi ? "Expedition baseline recorded. Grid stabilized." : "The chronicles for this era have concluded.";
     }
 
-    story += winners.length > 0 ? "Unity prevailed; the brood claims the record." : "The cycle resets, leaving only static and dust.";
-
-    return story;
+    return tone;
 }
 
-function compileStoryArcs(snakeEvents: GameEvent[], snake: SnakeState, allEvents: GameEvent[], theme: Theme) {
-    if (snakeEvents.length === 0) return { fullStory: "A shadow in the undergrowth...", visuals: [{ text: "...", visualPrompt: "Hidden" }] };
+function compileCausalArcs(snakeEvents: GameEvent[], snake: SnakeState, allEvents: GameEvent[], theme: Theme) {
+    if (snakeEvents.length === 0) return { fullStory: "A ghost in the shadows...", visuals: [] };
 
     const arcs: { text: string, visualPrompt: string }[] = [];
     const isSciFi = theme === 'SCIFI';
 
-    // 1. Scavenge Arc
-    const encounters = snakeEvents.filter(e => e.type === 'ENCOUNTER_RESULT');
-    if (encounters.length > 0) {
-        const victory = encounters.some(e => e.tags.includes('VICTORY'));
-        const text = victory
-            ? (isSciFi ? `System override successful. The unit integrated high-value components.` : `By the grace of the Sigil, the serpent claimed the spoils of the ancient altar.`)
-            : (isSciFi ? `Critical failure. Ambushed by rogue security bots.` : `The Alchemist's trap was sprung; blood was shed for nothing.`);
+    // Grouping into Cascades
+    const cascadeStarts = snakeEvents.filter(e => e.type === 'CASCADE_START');
+
+    // 1. Initial Identity Anchor
+    const firstHazard = snakeEvents.find(e => e.type === 'HAZARD_HIT');
+    if (firstHazard) {
         arcs.push({
-            text,
-            visualPrompt: isSciFi ? "A robotic snake hacking a glowing terminal" : "A knightly snake bowing before a stone altar"
+            text: isSciFi
+                ? `${snake.name} initiated hardware stress tests in the ${firstHazard.terrain}.`
+                : `Beneath the ${firstHazard.terrain} sky, ${snake.name} first tasted the bite of the land.`,
+            visualPrompt: `A snake being surprised by a trap in a ${firstHazard.terrain}`
         });
     }
 
-    // 2. Clash Arc
-    const fights = snakeEvents.filter(e => e.type === 'COMBAT_START');
-    if (fights.length > 0) {
-        const text = isSciFi
-            ? `Laser-sight locked on targets. The ${snake.name} engaged in multi-threaded combat.`
-            : `Fangs bared in the mud of the Clash. The ${snake.name} entered the fray with noble intent.`;
+    // 2. Adversity & Cascades
+    if (cascadeStarts.length > 0) {
         arcs.push({
-            text,
-            visualPrompt: isSciFi ? "Two cybernetic snakes fighting with neon energy coils" : "Two giant snakes coiled in a muddy battlefield"
+            text: isSciFi
+                ? `System experienced a cascade of failures. Damage types tracked: ${Array.from(new Set(snakeEvents.map(e => e.cause).filter(c => c !== 'NONE'))).join(', ')}.`
+                : `A storm of tragedy broke upon it. Driven by the elements and broken by steel, it entered a desperate struggle.`,
+            visualPrompt: "A snake surrounded by fire, storm, and fangs"
         });
     }
 
-    // 3. Final Fate
+    // 3. Behavioral Shifts (v7.0)
+    const shifts = snakeEvents.filter(e => e.type === 'BEHAVIOR_SHIFT');
+    shifts.forEach(s => {
+        arcs.push({
+            text: isSciFi
+                ? `Safety protocols bypassed: ${s.tags[0]} state active. ${s.tags[1]}.`
+                : `The serpent has been forged anew: ${s.tags[0]}! ${s.tags[1]}.`,
+            visualPrompt: `A snake showing a visible change or aura of ${s.tags[0]}`
+        });
+    });
+
+    // 4. Encounters
+    const choices = snakeEvents.filter(e => e.type === 'ENCOUNTER_CHOICE');
+    choices.forEach(c => {
+        const result = snakeEvents.find(e => e.type === 'ENCOUNTER_RESULT' && e.tick === c.tick);
+        if (result) {
+            arcs.push({
+                text: isSciFi
+                    ? `Encounter logic: Automated ${c.tags[0]} resolve. Outcome: ${result.tags[0]}.`
+                    : `In the moment of choice, the serpent's blood dictated ${c.tags[0]}. Result: ${result.tags[0]}.`,
+                visualPrompt: `A snake choosing to ${c.tags[0]} at a crossroad`
+            });
+        }
+    });
+
+    // 5. Final Fate
     const ko = snakeEvents.find(e => e.type === 'KO');
     if (ko) {
+        const causePhrase = getCausePhrase(ko.cause || 'NONE', isSciFi);
         arcs.push({
-            text: isSciFi ? "Unit de-rezzed. Data uploaded to the cloud." : "The knight falls. May his scales line the throne of he who follows.",
-            visualPrompt: isSciFi ? "A digital glitch effect in the shape of a snake" : "A broken snake crown resting on a mountain peak"
-        });
-    } else {
-        arcs.push({
-            text: isSciFi ? "The ghost remains in the machine." : "He stands as a monolith of the era.",
-            visualPrompt: "A majestic snake overlooking a vast, conquered landscape"
+            text: isSciFi ? `UNIT DE-REZZED. Cause: ${causePhrase}.` : `THE END. ${causePhrase}.`,
+            visualPrompt: "The final resting place of a fallen serpent"
         });
     }
 
@@ -88,4 +114,14 @@ function compileStoryArcs(snakeEvents: GameEvent[], snake: SnakeState, allEvents
         fullStory: arcs.map(a => a.text).join(' '),
         visuals: arcs
     };
+}
+
+function getCausePhrase(cause: CauseType, isSciFi: boolean): string {
+    switch (cause) {
+        case 'STORM': return isSciFi ? "Eradicated by containment field collapse" : "Swallowed by the narrowing eye of the storm";
+        case 'TERRAIN': return isSciFi ? "Chassis failure due to environment mismatch" : "Foundered in terrain it was never meant to cross";
+        case 'HAZARD': return isSciFi ? "Catastrophic impact with external obstacle" : "Broken by the jagged teeth of the land";
+        case 'COMBAT': return isSciFi ? "Purged by rival sub-routine" : "Slain in honorable, if bloody, combat";
+        default: return isSciFi ? "Unknown fatal error" : "Claimed by the silence of the waste";
+    }
 }

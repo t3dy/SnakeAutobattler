@@ -1,5 +1,5 @@
 import {
-    SnakeState, GameEvent, Cell, Stats, EventType, EnvironmentParams, NarrativeFlag, TerrainType
+    SnakeState, GameEvent, Cell, Stats, EventType, EnvironmentParams, NarrativeFlag, TerrainType, ResolveOutcome, CauseType
 } from './types';
 import { BODIES, INSTINCTS, AFFINITIES, QUIRKS } from './traits';
 
@@ -82,6 +82,7 @@ export class Simulation {
                 if (distToEdge < this.stormLevel) {
                     if (Math.random() > 0.3) {
                         this.world[y][x].hazard = { kind: '🌀', damage: 20 };
+                        // We will check for storm cause in handleHazard by kind
                     }
                 }
             }
@@ -98,25 +99,59 @@ export class Simulation {
             snake.pos = move;
             const cell = this.world[move.y][move.x];
 
+            // v7.0 Storm Pressure tracking
+            if (cell.hazard?.kind === '🌀') {
+                snake.evolution['storm_ticks'] = (snake.evolution['storm_ticks'] || 0) + 1;
+                if (snake.evolution['storm_ticks'] > 2 && !snake.flags.includes('DESPERATE')) {
+                    snake.flags.push('DESPERATE');
+                    this.emit(snake, 'BEHAVIOR_SHIFT', snake.pos, cell.terrain, ['DESPERATE', 'Driven by the Storm']);
+                }
+            } else {
+                snake.evolution['storm_ticks'] = 0; // Reset if outside immediately damaging storm
+            }
+
             if (this.envParams.mode && Math.random() < 0.1 && !cell.food && !cell.hazard) {
                 this.triggerEncounter(snake, cell);
             }
 
-            if (cell.food) snake.memory.food.push({ ...move });
-            if (cell.hazard) snake.memory.hazards.push({ ...move });
+            if (cell.food) {
+                snake.memory.food.push({ ...move });
+                this.handleFood(snake, cell);
+            }
+            if (cell.hazard) {
+                snake.memory.hazards.push({ ...move });
+                this.handleHazard(snake, cell);
+                this.checkCascade(snake);
+            }
 
             this.emit(snake, 'MOVE', move, cell.terrain, []);
             this.emit(snake, 'ENTER_TILE', move, cell.terrain, []);
-
-            if (cell.food) this.handleFood(snake, cell);
-            if (cell.hazard) this.handleHazard(snake, cell);
         }
     }
 
     triggerEncounter(snake: SnakeState, cell: Cell) {
-        // In v6.0, we pause and wait for player input
-        this.isWaitingForChoice = true;
-        this.emit(snake, 'PENDING_CHOICE', snake.pos, cell.terrain, ['encounter']);
+        // v7.0 Autonomous Resolve
+        const choice = this.calculateResolve(snake, cell);
+
+        this.emit(snake, 'ENCOUNTER_CHOICE', snake.pos, cell.terrain, [choice], undefined, undefined, 'NONE');
+        this.resolveEncounterChoice(snake, choice);
+    }
+
+    calculateResolve(snake: SnakeState, cell: Cell): ResolveOutcome {
+        const hpPerc = snake.hp / snake.maxHp;
+        const quirk = snake.draft.quirk;
+        const instinct = snake.draft.instinct;
+
+        if (quirk === 'Reckless' || instinct === 'Aggressive') {
+            if (hpPerc > 0.3) return 'FIGHT';
+            return Math.random() > 0.5 ? 'FIGHT' : 'HIDE';
+        }
+
+        if (quirk === 'Cunning' || hpPerc < 0.4) {
+            return 'HIDE';
+        }
+
+        return 'RUN';
     }
 
     resolveEncounterChoice(snake: SnakeState, choice: 'RUN' | 'HIDE' | 'FIGHT') {
@@ -181,12 +216,30 @@ export class Simulation {
     decideMove(snake: SnakeState, options: { x: number, y: number }[], isClash: boolean) {
         const bias = INSTINCTS[snake.draft.instinct].bias;
         const quirk = snake.draft.quirk;
+        const isDesperate = snake.flags.includes('DESPERATE');
+        const isScarred = snake.flags.includes('SCARRED');
 
         let validOptions = options;
-        if (quirk !== 'Reckless') {
+
+        // Scarred snakes move slower/more cautiously
+        if (isScarred) {
+            validOptions = options.filter(o => !snake.memory.hazards.some(h => h.x === o.x && h.y === o.y));
+        } else if (quirk !== 'Reckless') {
             validOptions = options.filter(o => !snake.memory.hazards.some(h => h.x === o.x && h.y === o.y));
         }
+
         if (validOptions.length === 0) validOptions = options;
+
+        // Desperate snakes move toward the center regardless of bias
+        if (isDesperate) {
+            const centerX = 8;
+            const centerY = 6;
+            return validOptions.sort((a, b) => {
+                const distA = Math.abs(a.x - centerX) + Math.abs(a.y - centerY);
+                const distB = Math.abs(b.x - centerX) + Math.abs(b.y - centerY);
+                return distA - distB;
+            })[0];
+        }
 
         const goalBias = isClash ? 'seeks_enemy' : bias;
 
@@ -215,7 +268,7 @@ export class Simulation {
         if (!cell.food) return;
         const heal = cell.food.value;
         snake.hp = Math.min(snake.maxHp, snake.hp + heal);
-        this.emit(snake, 'FOOD_EAT', snake.pos, cell.terrain, [cell.food.kind], heal);
+        this.emit(snake, 'FOOD_EAT', snake.pos, cell.terrain, [cell.food.kind], heal, undefined, 'NONE');
         cell.food = null;
     }
 
@@ -224,10 +277,18 @@ export class Simulation {
         let damage = cell.hazard.damage;
         if (snake.draft.quirk === 'Reckless') damage *= 1.5;
         snake.hp -= damage;
-        this.emit(snake, 'HAZARD_HIT', snake.pos, cell.terrain, [cell.hazard.kind], damage);
+
+        // Behavioral Growth: Hazard Survival
+        snake.evolution['hazards_hit'] = (snake.evolution['hazards_hit'] || 0) + 1;
+        if (snake.evolution['hazards_hit'] >= 2 && !snake.flags.includes('SCARRED')) {
+            snake.flags.push('SCARRED');
+            this.emit(snake, 'BEHAVIOR_SHIFT', snake.pos, cell.terrain, ['SCARRED', 'Gained Hazard Resistance']);
+        }
+
+        this.emit(snake, 'HAZARD_HIT', snake.pos, cell.terrain, [cell.hazard.kind], damage, undefined, cell.hazard.kind === '🌀' ? 'STORM' : 'HAZARD');
         if (snake.hp <= 0) {
             snake.alive = false;
-            this.emit(snake, 'KO', snake.pos, cell.terrain, ['hazard_death']);
+            this.emit(snake, 'KO', snake.pos, cell.terrain, ['hazard_death'], undefined, undefined, cell.hazard.kind === '🌀' ? 'STORM' : 'HAZARD');
         }
     }
 
@@ -246,25 +307,26 @@ export class Simulation {
     }
 
     dramaticFight(s1: SnakeState, s2: SnakeState) {
-        this.emit(s1, 'COMBAT_START', s1.pos, this.world[s1.pos.y][s1.pos.x].terrain, [`vs_${s2.name}`], undefined, s2.id);
+        const cell = this.world[s1.pos.y][s1.pos.x];
+        this.emit(s1, 'COMBAT_START', s1.pos, cell.terrain, [`vs_${s2.name}`], undefined, s2.id, 'COMBAT');
         const dmg1 = this.calcDmg(s1, s2);
         const dmg2 = this.calcDmg(s2, s1);
         s2.hp -= dmg1;
         s1.hp -= dmg2;
-        this.emit(s1, 'COMBAT_EXCHANGE', s1.pos, this.world[s1.pos.y][s1.pos.x].terrain, ['exchange_1'], dmg1, s2.id);
+        this.emit(s1, 'COMBAT_EXCHANGE', s1.pos, cell.terrain, ['exchange_1'], dmg1, s2.id, 'COMBAT');
 
         if (s1.hp <= 0 && s1.alive) {
             s1.alive = false;
-            this.emit(s1, 'KO', s1.pos, this.world[s1.pos.y][s1.pos.x].terrain, [`slain_by_${s2.name}`], undefined, s2.id);
+            this.emit(s1, 'KO', s1.pos, cell.terrain, [`slain_by_${s2.name}`], undefined, s2.id, 'COMBAT');
             s2.flags.push('DOMINANT');
         }
         if (s2.hp <= 0 && s2.alive) {
             s2.alive = false;
-            this.emit(s2, 'KO', s2.pos, this.world[s2.pos.y][s2.pos.x].terrain, [`slain_by_${s1.name}`], undefined, s1.id);
+            this.emit(s2, 'KO', s2.pos, cell.terrain, [`slain_by_${s1.name}`], undefined, s1.id, 'COMBAT');
             s1.flags.push('DOMINANT');
         }
         if (s1.alive && s2.alive) {
-            this.emit(s1, 'COMBAT_END', s1.pos, this.world[s1.pos.y][s1.pos.x].terrain, ['stalemate'], undefined, s2.id);
+            this.emit(s1, 'COMBAT_END', s1.pos, cell.terrain, ['stalemate'], undefined, s2.id, 'COMBAT');
         }
     }
 
@@ -273,7 +335,19 @@ export class Simulation {
         return Math.max(2, dmg + Math.floor(Math.random() * 5));
     }
 
-    emit(snake: SnakeState, type: EventType, pos: { x: number, y: number }, terrain: TerrainType, tags: string[], amount?: number, targetId?: string): GameEvent {
+    checkCascade(snake: SnakeState) {
+        const recentAdversity = this.events.filter(e =>
+            e.snakeId === snake.id &&
+            e.tick >= this.tick - 3 &&
+            (e.cause === 'HAZARD' || e.cause === 'STORM' || e.cause === 'COMBAT')
+        );
+
+        if (recentAdversity.length >= 2) {
+            this.emit(snake, 'CASCADE_START', snake.pos, this.world[snake.pos.y][snake.pos.x].terrain, ['adversity_cluster'], undefined, undefined, 'NONE');
+        }
+    }
+
+    emit(snake: SnakeState, type: EventType, pos: { x: number, y: number }, terrain: TerrainType, tags: string[], amount?: number, targetId?: string, cause: CauseType = 'NONE'): GameEvent {
         const event: GameEvent = {
             id: Math.random().toString(36).substr(2, 9),
             tick: this.tick,
@@ -284,6 +358,7 @@ export class Simulation {
             targetId,
             amount,
             tags,
+            cause,
             snapshot: {
                 hp: snake.hp,
                 effectiveStats: { ...snake.currentStats },

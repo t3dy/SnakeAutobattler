@@ -72,7 +72,10 @@ export type EventType =
     | 'MOVE' | 'ATTACK' | 'DAMAGE' | 'KO' | 'FOOD_EAT' | 'HAZARD_HIT'
     | 'BATTLE_START' | 'BATTLE_END' | 'STORM_ADVANCE' | 'COMBAT_START' | 'COMBAT_EXCHANGE' | 'COMBAT_END' | 'TURNING_POINT' | 'ENTER_TILE' | 'COMBAT_TICK'
     | 'SACRIFICE' | 'FEAT_ACCOMPLISHED' | 'LEVEL_UP' | 'GEAR_EQUIP' | 'ENCOUNTER_CHOICE' | 'ENCOUNTER_RESULT' | 'PHASE_SHIFT'
-    | 'PENDING_CHOICE' | 'CHOICE_MADE';
+    | 'PENDING_CHOICE' | 'CHOICE_MADE' | 'CASCADE_START' | 'BEHAVIOR_SHIFT';
+
+export type CauseType = 'STORM' | 'TERRAIN' | 'HAZARD' | 'COMBAT' | 'NONE';
+export type ResolveOutcome = 'RUN' | 'HIDE' | 'FIGHT';
 
 export interface GameEvent {
     id: string;
@@ -89,7 +92,9 @@ export interface GameEvent {
         effectiveStats: Stats;
         aiState: string;
         flags: NarrativeFlag[];
+        resolve?: number;
     };
+    cause?: CauseType;
 }
 
-export type NarrativeFlag = 'WOUNDED' | 'DOMINANT' | 'WELL_FED' | 'DESPERATE' | 'HEROIC';
+export type NarrativeFlag = 'WOUNDED' | 'DOMINANT' | 'WELL_FED' | 'DESPERATE' | 'HEROIC' | 'SCARRED';
