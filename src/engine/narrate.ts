@@ -2,11 +2,11 @@ import { GameEvent, SnakeState } from './types';
 import { BODIES, INSTINCTS, AFFINITIES, QUIRKS } from './traits';
 
 export function generateNarrative(events: GameEvent[], snakes: SnakeState[]) {
-    const recap = generateRecap(events, snakes);
+    const recap = generateDramaticRecap(events, snakes);
     const snakeStories = snakes.map(snake => ({
         name: snake.name,
         bio: generateOriginBio(snake),
-        story: generateSnakeStory(events.filter(e => e.snakeId === snake.id), snake)
+        story: compileStoryArcs(events.filter(e => e.snakeId === snake.id), snake, events)
     }));
 
     return { recap, snakeStories };
@@ -14,101 +14,98 @@ export function generateNarrative(events: GameEvent[], snakes: SnakeState[]) {
 
 function generateOriginBio(snake: SnakeState) {
     const d = snake.draft;
-    return `${BODIES[d.body].description} ${INSTINCTS[d.instinct].description} ${AFFINITIES[d.affinity].description} Notably, it is ${QUIRKS[d.quirk].description.toLowerCase()}`;
+    return `${BODIES[d.body].description} ${INSTINCTS[d.instinct].description} ${AFFINITIES[d.affinity].description} [Strategy: ${BODIES[d.body].strategy} ${INSTINCTS[d.instinct].strategy}]`;
 }
 
-function generateRecap(events: GameEvent[], snakes: SnakeState[]) {
+function generateDramaticRecap(events: GameEvent[], snakes: SnakeState[]) {
     const kos = events.filter(e => e.type === 'KO');
-    const foodEaten = events.filter(e => e.type === 'FOOD_EAT').length;
+    const stormTicks = events.filter(e => e.type === 'STORM_ADVANCE').length;
+    const highestEvolution = [...snakes].sort((a, b) =>
+        Object.values(b.evolution).reduce((s, v) => s + (v || 0), 0) -
+        Object.values(a.evolution).reduce((s, v) => s + (v || 0), 0)
+    )[0];
+
     const winners = snakes.filter(s => s.alive && s.team === 'player');
+    const survivorCount = snakes.filter(s => s.alive).length;
 
-    let intro = "The battle concluded after a series of intense territorial skirmishes. ";
-    let result = winners.length > 0 ? "Your team emerged victorious, having dominated the key biomes." : "The rival snakes proved too resilient, claiming the territory for themselves.";
+    let story = `The arena became a crucible of survival. `;
+    if (stormTicks > 0) story += `The narrowing boundaries of the storm claimed the weak, forcing the remaining ${survivorCount} snakes into a final, bloody convergence. `;
 
-    return `${intro} Total food consumed: ${foodEaten}. Fatalities: ${kos.length}. ${result}`;
-}
-
-function generateSnakeStory(events: GameEvent[], snake: SnakeState) {
-    if (events.length === 0) return "This snake remained in the shadows, unseen and untouched.";
-
-    const blocks: string[] = [];
-    let currentTerrain = '';
-
-    events.forEach((event) => {
-        if (event.terrain !== currentTerrain) {
-            currentTerrain = event.terrain;
-            blocks.push(`Entering the ${event.terrain}, ${snake.name} ${getTerrainVerb(event.terrain, snake)}.`);
-        }
-
-        switch (event.type) {
-            case 'FOOD_EAT':
-                blocks.push(getFoodFlavor(snake, event));
-                break;
-            case 'HAZARD_HIT':
-                blocks.push(getHazardFlavor(snake, event));
-                break;
-            case 'COMBAT_START':
-                blocks.push(getCombatStartFlavor(snake, event));
-                break;
-            case 'COMBAT_TICK':
-                if (event.amount && event.amount > 5) {
-                    blocks.push(getCombatTickFlavor(snake, event));
-                }
-                break;
-            case 'RETREAT':
-                blocks.push(getRetreatFlavor(snake, event));
-                break;
-            case 'KO':
-                blocks.push(`${snake.name} finally went still, its journey ending in the ${event.terrain}.`);
-                break;
-        }
-    });
-
-    return blocks.join(' ');
-}
-
-function getTerrainVerb(terrain: string, snake: SnakeState): string {
-    const affinity = snake.draft.affinity;
-    if (AFFINITIES[affinity].terrain === terrain) return "felt a surge of power, fully at home in its element";
-
-    switch (terrain) {
-        case 'forest': return "slithered through the thick undergrowth";
-        case 'desert': return "skimmed across the burning sands";
-        case 'river': return "struggled against the cold current";
-        case 'mountain': return "carefully navigated the jagged rocks";
-        default: return "moved cautiously";
+    if (kos.length > 3) {
+        story += `It was a massacre, with fatalities occurring in almost every biome. `;
+    } else {
+        story += `Territorial posturing dominated most of the encounter, with few direct kills. `;
     }
+
+    if (highestEvolution) {
+        story += `${highestEvolution.name} showed the most significant growth, adapting rapidly to the environment. `;
+    }
+
+    story += winners.length > 0 ? "Against all odds, your brood held the territory." : "The wild reclaim the land; your team has fallen.";
+
+    return story;
 }
 
-function getFoodFlavor(snake: SnakeState, event: GameEvent): string {
-    const quirk = snake.draft.quirk;
-    if (quirk === 'Voracious') return `Driven by an insatiable hunger, it tore into the ${event.tags[1]} 🍎, barely pausing to breathe.`;
-    return `It discovered a ${event.tags[1]} 🍎 and fed, its movements briefly slowing as it digested the meal.`;
-}
+/**
+ * Story Compiler v4.0
+ * Group events into dramatic beats instead of 1-1 mapping.
+ */
+function compileStoryArcs(snakeEvents: GameEvent[], snake: SnakeState, allEvents: GameEvent[]) {
+    if (snakeEvents.length === 0) return "A shadow in the undergrowth, it left no trace.";
 
-function getHazardFlavor(snake: SnakeState, event: GameEvent): string {
-    const quirk = snake.draft.quirk;
-    if (quirk === 'Reckless') return `Ignoring the warning signs, it charged straight into a ${event.tags[1]} ⚠️. The impact was brutal.`;
-    if (quirk === 'Cautious') return `Despite its best efforts to stay safe, it was caught by a hidden ${event.tags[1]} ⚠️.`;
-    return `It stumbled into a ${event.tags[1]} ⚠️ and was badly hurt.`;
-}
+    const arcs: string[] = [];
+    const drafts = snake.draft;
 
-function getCombatStartFlavor(snake: SnakeState, event: GameEvent): string {
-    const instinct = snake.draft.instinct;
-    if (instinct === 'Hunter') return `Scenting an intruder, it coiled and launched an aggressive assault before the rival could react.`;
-    if (instinct === 'Territorial') return `A rival dared to enter its domain. It hissed a warning and prepared to defend its ground.`;
-    return `A rival was spotted nearby. Combat was unavoidable.`;
-}
+    // 1. Exploration Arc (Biomes)
+    const exploredBiomes = Array.from(new Set(snakeEvents.map(e => e.terrain))).slice(0, 3);
+    if (exploredBiomes.length > 1) {
+        arcs.push(`${snake.name} traversed from the ${exploredBiomes[0]} to the ${exploredBiomes[1]}, displaying its ${drafts.body.split(' ')[0]} endurance.`);
+    }
 
-function getCombatTickFlavor(snake: SnakeState, event: GameEvent): string {
-    const body = snake.draft.body;
-    if (body === 'Boulderback Constrictor') return `It used its massive weight to crush its foe, scales grinding against scales.`;
-    if (body === 'Shadow Striker') return `A flash of movement, followed by the insertion of needle-sharp fangs.`;
-    return `It struck hard, dealing significant damage to its foe.`;
-}
+    // 2. Conflict/Combat Arc (Summarize all fights)
+    const fights = snakeEvents.filter(e => e.type === 'COMBAT_START');
+    if (fights.length > 0) {
+        const uniqueFoes = Array.from(new Set(fights.map(f => f.targetId)));
+        let fightStory = `The scent of ${uniqueFoes.length} rivals kept it on high alert. `;
 
-function getRetreatFlavor(snake: SnakeState, event: GameEvent): string {
-    const quirk = snake.draft.quirk;
-    if (quirk === 'Paranoid') return `Fearing the worst, it broke off the engagement and vanished into the brush before things could turn fatal.`;
-    return `Wounded and weary, it managed to slip away from the confrontation.`;
+        const turningPoints = snakeEvents.filter(e => e.type === 'TURNING_POINT');
+        if (turningPoints.length > 0) {
+            fightStory += `In one desperate clash, the tide of battle shifted violently. `;
+        }
+
+        const kills = allEvents.filter(e => e.type === 'KO' && e.targetId === snake.id && e.tags.some(t => t.includes(`slain_by`)));
+        if (kills.length > 0) {
+            fightStory += `It asserted its dominance through raw force, claiming its place in the hierarchy. `;
+        }
+
+        arcs.push(fightStory);
+    }
+
+    // 3. Survival/Hazard Arc
+    const hazards = snakeEvents.filter(e => e.type === 'HAZARD_HIT');
+    if (hazards.length > 2) {
+        arcs.push(`The environment itself seemed to reject its presence; it limped through a series of brutal accidents.`);
+    } else if (hazards.length > 0) {
+        arcs.push(`It narrowly survived the ${hazards[0].tags[0] || 'hazards'} of the ${hazards[0].terrain}.`);
+    }
+
+    // 4. Memory/Evolution Arc
+    const foods = snakeEvents.filter(e => e.type === 'FOOD_EAT');
+    if (foods.length > 1) {
+        arcs.push(`${snake.name} utilized its ${drafts.instinct} instincts to locate vital caches, growing stronger with every meal.`);
+    }
+
+    // 5. Final Fate
+    const ko = snakeEvents.find(e => e.type === 'KO');
+    if (ko) {
+        if (ko.tags.some(t => t.includes('hazard'))) {
+            arcs.push(`Finally, the relentless pressures of the ${ko.terrain} proved too much; it succumbed to the world itself.`);
+        } else {
+            arcs.push(`Worn down by rival fangs, its journey ended beneath the ${ko.terrain} sky.`);
+        }
+    } else {
+        arcs.push(`Against the thinning storm, it remained unyielding, a true survivor of the saga.`);
+    }
+
+    return arcs.join(' ');
 }

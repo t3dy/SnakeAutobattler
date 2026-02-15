@@ -1,5 +1,14 @@
 export type TerrainType = 'forest' | 'desert' | 'river' | 'mountain';
 
+export type Climate = 'Tropical' | 'Arid' | 'Alpine' | 'Standard';
+export type Density = 'High' | 'Sparse' | 'Standard';
+
+export interface EnvironmentParams {
+    climate: Climate;
+    fauna: Density; // Food density
+    flora: Density; // Forest density
+}
+
 export interface Cell {
     terrain: TerrainType;
     food: { kind: string; value: number } | null;
@@ -28,6 +37,8 @@ export interface SnakeDraft {
     quirk: QuirkType;
 }
 
+export type NarrativeFlag = 'WOUNDED' | 'DOMINANT' | 'PANICKED' | 'WELL_FED' | 'SCARRED';
+
 export interface SnakeState {
     id: string;
     name: string;
@@ -42,14 +53,22 @@ export interface SnakeState {
     alive: boolean;
     inventory: any[];
     statuses: string[];
+    flags: NarrativeFlag[];
+    memory: {
+        hazards: { x: number; y: number }[];
+        food: { x: number; y: number }[];
+        enemies: { x: number; y: number }[];
+    };
+    evolution: Partial<Stats>;
 }
 
 export type EventType =
     | 'MOVE' | 'ENTER_TILE' | 'FOOD_FOUND' | 'FOOD_EAT'
     | 'HAZARD_SPOTTED' | 'HAZARD_HIT' | 'COMBAT_START'
-    | 'COMBAT_TICK' | 'COMBAT_END' | 'RETREAT' | 'KO'
+    | 'COMBAT_EXCHANGE' | 'TURNING_POINT' | 'COMBAT_END' | 'RETREAT' | 'KO'
     | 'STATUS_GAIN' | 'STATUS_LOSE' | 'CLAIM_TERRITORY'
-    | 'PATROL' | 'AMBUSH' | 'DISCOVER' | 'TURNING_POINT' | 'BATTLE_END';
+    | 'PATROL' | 'AMBUSH' | 'DISCOVER' | 'TRACKING' | 'BATTLE_END'
+    | 'STORM_ADVANCE';
 
 export interface GameEvent {
     id: string;
@@ -65,5 +84,6 @@ export interface GameEvent {
         hp: number;
         effectiveStats: Stats;
         aiState: string;
+        flags: NarrativeFlag[];
     };
 }

@@ -1,17 +1,21 @@
 import { generateWorld } from './world';
 import { Simulation } from './sim';
 import { generateNarrative } from './narrate';
-import { SnakeDraft, SnakeState, Stats } from './types';
+import { SnakeDraft, SnakeState, Stats, EnvironmentParams } from './types';
 import { BODIES, AFFINITIES, QUIRKS } from './traits';
 
-export function runBattle(playerTeam: SnakeDraft[], enemyTeam: SnakeDraft[]) {
-    const world = generateWorld();
+export function runBattle(
+    playerTeam: SnakeDraft[],
+    enemyTeam: SnakeDraft[],
+    envParams: EnvironmentParams = { climate: 'Standard', fauna: 'Standard', flora: 'Standard' }
+) {
+    const world = generateWorld(envParams);
     const snakes: SnakeState[] = [
         ...playerTeam.map((d, i) => createSnake(d, `PlayerSnake_${i}`, 'player', { x: 0, y: Math.floor(i * 4) })),
         ...enemyTeam.map((d, i) => createSnake(d, `EnemySnake_${i}`, 'enemy', { x: 15, y: Math.floor(i * 4) }))
     ];
 
-    const sim = new Simulation(world, snakes);
+    const sim = new Simulation(world, snakes, envParams);
     const events = sim.run();
 
     return {
@@ -52,6 +56,19 @@ function createSnake(draft: SnakeDraft, name: string, team: 'player' | 'enemy', 
         aiState: 'searching',
         alive: true,
         inventory: [],
-        statuses: []
+        statuses: [],
+        flags: [],
+        memory: {
+            hazards: [],
+            food: [],
+            enemies: []
+        },
+        evolution: {
+            speed: 0,
+            size: 0,
+            venom: 0,
+            agility: 0,
+            camouflage: 0
+        }
     };
 }

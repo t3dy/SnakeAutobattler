@@ -2,14 +2,15 @@ import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import { runBattle } from './engine/engine'
 import { BODIES, INSTINCTS, AFFINITIES, QUIRKS } from './engine/traits'
-import { SnakeDraft, BodyType, InstinctType, AffinityType, QuirkType } from './engine/types'
+import { SnakeDraft, BodyType, InstinctType, AffinityType, QuirkType, EnvironmentParams } from './engine/types'
 import Arena from './components/Arena'
 
-type EngineVersion = 'v1.0' | 'v2.0' | 'v3.0';
+type EngineVersion = 'v1.0' | 'v2.0' | 'v3.0' | 'v4.0';
 
 function App() {
-    const [gameState, setGameState] = useState<'landing' | 'draft' | 'battle' | 'recap'>('landing')
-    const [engineVersion, setEngineVersion] = useState<EngineVersion>('v3.0')
+    const [gameState, setGameState] = useState<'landing' | 'env_draft' | 'draft' | 'battle' | 'recap'>('landing')
+    const [engineVersion, setEngineVersion] = useState<EngineVersion>('v4.0')
+    const [envParams, setEnvParams] = useState<EnvironmentParams>({ climate: 'Standard', fauna: 'Standard', flora: 'Standard' })
     const [draftingSnakeIdx, setDraftingSnakeIdx] = useState(0)
     const [currentDraft, setCurrentDraft] = useState<Partial<SnakeDraft>>({})
     const [playerTeam, setPlayerTeam] = useState<SnakeDraft[]>([])
@@ -22,7 +23,16 @@ function App() {
 
     const selectVersion = (v: EngineVersion) => {
         setEngineVersion(v)
-        setGameState('draft')
+        if (v === 'v4.0') {
+            setGameState('env_draft')
+        } else {
+            setGameState('draft')
+        }
+    }
+
+    const handleEnvPick = (category: keyof EnvironmentParams, value: any) => {
+        const next = { ...envParams, [category]: value }
+        setEnvParams(next)
     }
 
     const handlePick = (category: keyof SnakeDraft, value: any) => {
@@ -49,13 +59,13 @@ function App() {
             affinity: Object.keys(AFFINITIES)[Math.floor(Math.random() * 4)] as AffinityType,
             quirk: Object.keys(QUIRKS)[Math.floor(Math.random() * 4)] as QuirkType
         }))
-        const result = runBattle(playerTeam, enemyTeam)
+        const result = runBattle(playerTeam, enemyTeam, envParams)
         setBattleResult(result)
         setGameState('recap')
         setCurrentTick(0)
 
-        // Auto-play replay only in v3.0
-        if (engineVersion === 'v3.0') {
+        // Auto-play replay for v3 and v4
+        if (engineVersion === 'v3.0' || engineVersion === 'v4.0') {
             setIsPlaying(true)
         }
     }
@@ -93,15 +103,46 @@ function App() {
                                 <span>Legacy Log Simulation</span>
                             </button>
                             <button className="version-btn" onClick={() => selectVersion('v2.0')}>
-                                <strong>v2.0 PERSONALITY</strong>
-                                <span>Enhanced Bios & Flavor</span>
+                                <strong>v2.0</strong>
+                                <span>Personality & Bios</span>
                             </button>
                             <button className="version-btn" onClick={() => selectVersion('v3.0')}>
-                                <strong>v3.0 VISUAL</strong>
-                                <span>Animated Arena Replay</span>
+                                <strong>v3.0</strong>
+                                <span>Visual Arena Replay</span>
+                            </button>
+                            <button className="version-btn v4-highlight" onClick={() => selectVersion('v4.0')}>
+                                <strong>v4.0 SAGA</strong>
+                                <span>The Dramatic Overhaul</span>
                             </button>
                         </div>
-                        <p className="landing-hint">All versions share the same core 16-trait drafting system.</p>
+                    </div>
+                )}
+
+                {gameState === 'env_draft' && (
+                    <div className="env-draft-screen">
+                        <h2>DEFINE THE ARENA</h2>
+                        <div className="env-options-grid">
+                            <div className="env-card">
+                                <h3>CLIMATE</h3>
+                                <button className={envParams.climate === 'Standard' ? 'active' : ''} onClick={() => handleEnvPick('climate', 'Standard')}>STANDARD</button>
+                                <button className={envParams.climate === 'Tropical' ? 'active' : ''} onClick={() => handleEnvPick('climate', 'Tropical')}>TROPICAL (RIVERS)</button>
+                                <button className={envParams.climate === 'Arid' ? 'active' : ''} onClick={() => handleEnvPick('climate', 'Arid')}>ARID (DUNES)</button>
+                                <button className={envParams.climate === 'Alpine' ? 'active' : ''} onClick={() => handleEnvPick('climate', 'Alpine')}>ALPINE (PEAKS)</button>
+                            </div>
+                            <div className="env-card">
+                                <h3>FAUNA (FOOD)</h3>
+                                <button className={envParams.fauna === 'Standard' ? 'active' : ''} onClick={() => handleEnvPick('fauna', 'Standard')}>STANDARD</button>
+                                <button className={envParams.fauna === 'High' ? 'active' : ''} onClick={() => handleEnvPick('fauna', 'High')}>DENSE</button>
+                                <button className={envParams.fauna === 'Sparse' ? 'active' : ''} onClick={() => handleEnvPick('fauna', 'Sparse')}>SPARSE</button>
+                            </div>
+                            <div className="env-card">
+                                <h3>FLORA (FOREST)</h3>
+                                <button className={envParams.flora === 'Standard' ? 'active' : ''} onClick={() => handleEnvPick('flora', 'Standard')}>STANDARD</button>
+                                <button className={envParams.flora === 'Dense' ? 'active' : ''} onClick={() => handleEnvPick('flora', 'Dense')}>DENSE</button>
+                                <button className={envParams.flora === 'Barren' ? 'active' : ''} onClick={() => handleEnvPick('flora', 'Barren')}>BARREN</button>
+                            </div>
+                        </div>
+                        <button className="proceed-btn" onClick={() => setGameState('draft')}>LOCK PARAMETERS & DRAFT SQUAD</button>
                     </div>
                 )}
 
@@ -122,16 +163,16 @@ function App() {
 
                 {gameState === 'battle' && (
                     <div className="battle-screen">
-                        <h2>THE ARENA IS READY</h2>
-                        <p>Your team of 3 snakes is coiled and ready.</p>
-                        <button onClick={startFight}>UNLEASH THE SNAKES</button>
+                        <h2>ARENA PARAMETERS SET</h2>
+                        <p>Climate: {envParams.climate} | Fauna: {envParams.fauna} | Flora: {envParams.flora}</p>
+                        <button onClick={startFight}>UNLEASH THE SAGA</button>
                     </div>
                 )}
 
                 {gameState === 'recap' && battleResult && (
                     <div className="recap-screen">
 
-                        {engineVersion === 'v3.0' && (
+                        {(engineVersion === 'v3.0' || engineVersion === 'v4.0') && (
                             <div className="visual-replay-container">
                                 <h2>ARENA REPLAY: TICK {currentTick}</h2>
                                 <Arena
@@ -154,7 +195,7 @@ function App() {
                                 {battleResult.narrative.snakeStories.map((s: any, i: number) => (
                                     <div key={i} className="snake-story-box">
                                         <h3>{s.name}</h3>
-                                        {(engineVersion === 'v2.0' || engineVersion === 'v3.0') && (
+                                        {(engineVersion !== 'v1.0') && (
                                             <p className="snake-bio"><em>{s.bio}</em></p>
                                         )}
                                         <p>{s.story}</p>
@@ -179,7 +220,10 @@ function CategoryBox({ title, options, onSelect }: any) {
             <h3>SELECT {title}</h3>
             <div className="option-grid">
                 {Object.keys(options).map(opt => (
-                    <button key={opt} onClick={() => onSelect(opt)}>{opt}</button>
+                    <div key={opt} className="trait-card">
+                        <button onClick={() => onSelect(opt)}>{opt}</button>
+                        <p className="trait-desc">{options[opt].description}</p>
+                    </div>
                 ))}
             </div>
         </div>
