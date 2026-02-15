@@ -8,7 +8,7 @@ import Arena from './components/Arena'
 type EngineVersion = 'v1.0' | 'v2.0' | 'v3.0' | 'v4.0' | 'v5.0';
 
 function App() {
-    const [gameState, setGameState] = useState<'landing' | 'env_draft' | 'draft' | 'battle' | 'recap'>('landing')
+    const [gameState, setGameState] = useState<'landing' | 'mode_select' | 'env_draft' | 'draft' | 'battle' | 'recap'>('landing')
     const [engineVersion, setEngineVersion] = useState<EngineVersion>('v5.0')
     const [envParams, setEnvParams] = useState<EnvironmentParams>({
         climate: 'Standard',
@@ -132,6 +132,54 @@ function App() {
                                 <p className="version-desc">The Ultimate Saga. Hot-Seat 2-Player modes, Medieval/Sci-Fi themes, and FTL-style dungeon depth.</p>
                             </button>
                         </div>
+                        <p className="landing-hint">All versions share the same core 16-trait drafting system.</p>
+                    </div>
+                )}
+
+                {gameState === 'mode_select' && (
+                    <div className="mode-select-screen">
+                        <h2>CHRONICLE SETTINGS</h2>
+                        <div className="v5-selection-container">
+                            <div className="v5-panel">
+                                <h3>THEME OVERHAUL</h3>
+                                <div className="theme-grid">
+                                    <button className={envParams.theme === 'MEDIEVAL' ? 'active theme-btn' : 'theme-btn'} onClick={() => handleEnvPick('theme', 'MEDIEVAL')}>
+                                        <strong>⚔️ MEDIEVAL</strong>
+                                        <span>Honor, Steel & Castles</span>
+                                    </button>
+                                    <button className={envParams.theme === 'SCIFI' ? 'active theme-btn' : 'theme-btn'} onClick={() => handleEnvPick('theme', 'SCIFI')}>
+                                        <strong>🔫 SCI-FI</strong>
+                                        <span>Lasers, Outposts & Energy</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="v5-panel">
+                                <h3>GAME MODE</h3>
+                                <div className="mode-grid">
+                                    <button className={envParams.mode === 'SOLO' ? 'active mode-btn' : 'mode-btn'} onClick={() => handleEnvPick('mode', 'SOLO')}>
+                                        <strong>👤 SOLO</strong>
+                                        <span>Classic Exploration</span>
+                                    </button>
+                                    <button className={envParams.mode === 'HOTSEAT_BATTLE' ? 'active mode-btn' : 'mode-btn'} onClick={() => handleEnvPick('mode', 'HOTSEAT_BATTLE')}>
+                                        <strong>🤜 BATTLE</strong>
+                                        <span>Hot-Seat P1 vs P2</span>
+                                    </button>
+                                    <button className={envParams.mode === 'HOTSEAT_COOP' ? 'active mode-btn' : 'mode-btn'} onClick={() => handleEnvPick('mode', 'HOTSEAT_COOP')}>
+                                        <strong>🤝 CO-OP</strong>
+                                        <span>Shared Expedition</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mode-description-box">
+                            {envParams.mode === 'HOTSEAT_COOP' && <p>🤝 <strong>COOPERATIVE MODE</strong>: Work together to survive the shrinking arena. Gain <strong>HONOR</strong> through sacrificial feats for the community.</p>}
+                            {envParams.mode === 'HOTSEAT_BATTLE' && <p>⚔️ <strong>BATTLE MODE</strong>: Move through secret terrain to gain XP and gear before a forced final clash at Tick 40.</p>}
+                            {envParams.mode === 'SOLO' && <p>👤 <strong>SOLO EXPEDITION</strong>: The single-player journey through the chronicles.</p>}
+                        </div>
+
+                        <button className="proceed-btn" onClick={() => setGameState('env_draft')}>PROCEED TO WORLD DRAFT</button>
                     </div>
                 )}
 
