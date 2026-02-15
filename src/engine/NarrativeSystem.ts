@@ -126,23 +126,27 @@ export class NarrativeComposer {
         const isSlither = context.action === 'MOVE';
         const rng = new DeterministicRandom(context.seed);
 
-        // 1. BIO (Environment) - Throttled
-        const bio = this.selectTemplate(context, "BIO", "ENVIRONMENT", rng);
+        // v15.0 Narrative Curation: Probability check for atmospheric layers (25% chance)
+        const roll = (chance: number) => rng.next() < chance;
+        const atmosphericChance = 0.25;
 
-        // 2. ID (Identity) - Mandatory 1
+        // 1. BIO (Environment) - Probabilistic
+        const bio = roll(atmosphericChance) ? this.selectTemplate(context, "BIO", "ENVIRONMENT", rng) : null;
+
+        // 2. ID (Identity) - Mandatory
         const idCategory = isSlither ? "SLITHER" : "IDENTITY";
         let id = this.selectTemplate(context, "ID", idCategory as any, rng);
         if (!id) id = isSlither ? "{snakeName} slithered." : "The snake reacted.";
 
-        // 3. ACT (Choreography) - Mandatory 1
+        // 3. ACT (Choreography) - Mandatory if not slithering
         let act = isSlither ? null : this.selectTemplate(context, "ACT", "CHOREOGRAPHY", rng);
         if (!act && !isSlither) act = "Action occurred.";
 
-        // 4. GENRE (Wrapper) - Optional
-        const genre = this.selectTemplate(context, "GENRE", "GENRE_WRAPPER", rng);
+        // 4. GENRE (Wrapper) - Probabilistic
+        const genre = roll(atmosphericChance) ? this.selectTemplate(context, "GENRE", "GENRE_WRAPPER", rng) : null;
 
-        // 5. META (Radiance) - Optional Transform
-        const meta = this.selectTemplate(context, "META", "META_TONE", rng);
+        // 5. META (Radiance/Tone) - Probabilistic
+        const meta = roll(atmosphericChance) ? this.selectTemplate(context, "META", "META_TONE", rng) : null;
 
         // Assembly
         let beat = bio ? bio + " " : "";
@@ -170,9 +174,14 @@ export class NarrativeComposer {
             this.matchTrigger(t.trigger, context)
         );
 
-        // 2. Filter by Cooldowns (History)
+        // 2. Filter by Cooldowns and Variety
         candidates = candidates.filter(t => {
-            if (!t.cooldown) return true;
+            if (!t.cooldown) {
+                // Variety check: don't pick the same template twice in a row if there are others
+                const lastUsed = context.history.usedTemplateIds[context.history.usedTemplateIds.length - 1];
+                if (lastUsed === t.id && candidates.length > 1) return false;
+                return true;
+            }
             const cooldownRem = context.history.perTemplateCooldowns[t.id] || 0;
             return cooldownRem <= 0;
         });

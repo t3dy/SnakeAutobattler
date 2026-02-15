@@ -296,7 +296,12 @@ function App() {
                     const newEvents = activeSim.events.slice(prevEventsCount);
                     newEvents.forEach((e: GameEvent) => {
                         // We only log events that have narrative significance (MOVE, HAZARD, CASCADE, etc)
-                        if (['MOVE', 'HAZARD_HIT', 'KO', 'VICTORY', 'DEFEAT', 'DAMAGE', 'FEAT_ACCOMPLISHED', 'PHASE_SHIFT'].includes(e.type)) {
+                        const isMove = e.type === 'MOVE';
+                        const isSignificantMove = isMove && (e.tick % 15 === 0 || e.tick === 1);
+
+                        const loggableTypes = ['HAZARD_HIT', 'KO', 'VICTORY', 'DEFEAT', 'DAMAGE', 'FEAT_ACCOMPLISHED', 'PHASE_SHIFT'];
+
+                        if (loggableTypes.includes(e.type) || isSignificantMove) {
                             const snake = activeSim.snakes.find((s: SnakeState) => s.id === e.snakeId);
                             if (snake || e.snakeId === 'SYSTEM') {
                                 // For simplicity, we create a basic context or use composer directly
