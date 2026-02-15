@@ -1,7 +1,7 @@
 export type TerrainType = 'forest' | 'desert' | 'river' | 'mountain';
 
 export type Climate = 'Tropical' | 'Arid' | 'Alpine' | 'Standard';
-export type Density = 'High' | 'Sparse' | 'Standard';
+export type Density = 'High' | 'Sparse' | 'Standard' | 'Dense' | 'Barren';
 
 export interface EnvironmentParams {
     climate: Climate;
@@ -65,7 +65,7 @@ export interface SnakeState {
 export type EventType =
     | 'MOVE' | 'ENTER_TILE' | 'FOOD_FOUND' | 'FOOD_EAT'
     | 'HAZARD_SPOTTED' | 'HAZARD_HIT' | 'COMBAT_START'
-    | 'COMBAT_EXCHANGE' | 'TURNING_POINT' | 'COMBAT_END' | 'RETREAT' | 'KO'
+    | 'COMBAT_TICK' | 'COMBAT_EXCHANGE' | 'TURNING_POINT' | 'COMBAT_END' | 'RETREAT' | 'KO'
     | 'STATUS_GAIN' | 'STATUS_LOSE' | 'CLAIM_TERRITORY'
     | 'PATROL' | 'AMBUSH' | 'DISCOVER' | 'TRACKING' | 'BATTLE_END'
     | 'STORM_ADVANCE';

@@ -101,18 +101,22 @@ function App() {
                             <button className="version-btn" onClick={() => selectVersion('v1.0')}>
                                 <strong>v1.0 CORE</strong>
                                 <span>Legacy Log Simulation</span>
+                                <p className="version-desc">The original text-based transcript. Simple drafting, minimal flavor.</p>
                             </button>
                             <button className="version-btn" onClick={() => selectVersion('v2.0')}>
-                                <strong>v2.0</strong>
-                                <span>Personality & Bios</span>
+                                <strong>v2.0 PERSONALITY</strong>
+                                <span>Enhanced Bios & Flavor</span>
+                                <p className="version-desc">Introduces unique snake archetypes, origin bios, and personality-driven prose.</p>
                             </button>
                             <button className="version-btn" onClick={() => selectVersion('v3.0')}>
-                                <strong>v3.0</strong>
-                                <span>Visual Arena Replay</span>
+                                <strong>v3.0 VISUAL</strong>
+                                <span>Animated Arena Replay</span>
+                                <p className="version-desc">Watch the battle unfold in real-time on a 16x12 emoji grid with playback controls.</p>
                             </button>
                             <button className="version-btn v4-highlight" onClick={() => selectVersion('v4.0')}>
                                 <strong>v4.0 SAGA</strong>
                                 <span>The Dramatic Overhaul</span>
+                                <p className="version-desc">The ultimate evolution: Environment drafting, spatial memory, and arc-driven storytelling.</p>
                             </button>
                         </div>
                     </div>
