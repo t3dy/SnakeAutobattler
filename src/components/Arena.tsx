@@ -104,8 +104,18 @@ const Arena: React.FC<ArenaProps> = ({ world, events, currentTick, snakes, param
         return { transition: 'transform 0.8s ease-in-out' };
     }, [events, currentTick, isV8, world]);
 
+    const weatherClass = useMemo(() => {
+        if (!isV8) return '';
+        switch (params?.climate) {
+            case 'Lush': return 'weather-rain';
+            case 'Arid': return 'weather-sandstorm';
+            case 'Binary': return 'weather-glitch';
+            default: return 'weather-none';
+        }
+    }, [isV8, params?.climate]);
+
     return (
-        <div className="arena-viewport">
+        <div className={`arena-viewport ${weatherClass}`}>
             {isV8 && <div className="weather-overlay" />}
             <div className="arena-grid" style={cameraTransform}>
                 {grid.map((row, y) => (

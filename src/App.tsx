@@ -244,6 +244,7 @@ function App() {
                     <div className="battle-screen">
                         {activeSim ? (
                             <div className="scene-container">
+                                {engineVersion === 'v8.0' && <div className="parallax-backdrop" style={{ backgroundImage: `url('https://api.dicebear.com/7.x/shapes/svg?seed=${envParams.climate}')` }} />}
                                 <h2>THE SAGA UNFOLDS</h2>
                                 <Arena
                                     world={activeSim.world}

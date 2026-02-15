@@ -51,6 +51,85 @@ body {
     animation: pulseWeather 5s infinite alternate;
 }
 
+/* v8.0 Weather Effects */
+.weather-rain .weather-overlay {
+    background: linear-gradient(rgba(0, 100, 255, 0.1), transparent);
+    background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.05) 0, rgba(255, 255, 255, 0.05) 1px, transparent 1px, transparent 10px);
+    animation: rainMove 0.5s linear infinite;
+}
+
+.weather-sandstorm .weather-overlay {
+    background: rgba(255, 150, 0, 0.1);
+    filter: blur(2px);
+    animation: sandMove 2s linear infinite;
+}
+
+.weather-glitch .weather-overlay {
+    background: rgba(0, 255, 127, 0.05);
+    mix-blend-mode: color-dodge;
+    animation: glitchStatic 0.1s steps(2) infinite;
+}
+
+@keyframes rainMove {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: 0 100px;
+    }
+}
+
+@keyframes sandMove {
+    from {
+        transform: translateX(-10%) skewX(-10deg);
+    }
+
+    to {
+        transform: translateX(10%) skewX(-10deg);
+    }
+}
+
+@keyframes glitchStatic {
+    0% {
+        opacity: 0.1;
+    }
+
+    100% {
+        opacity: 0.3;
+    }
+}
+
+/* Encounter Parallax */
+.scene-container {
+    position: relative;
+    overflow: hidden;
+    background: #000;
+}
+
+.parallax-backdrop {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 200%;
+    height: 100px;
+    background-repeat: repeat-x;
+    z-index: 5;
+    opacity: 0.3;
+    animation: panParallax 20s linear infinite;
+    transform: translateY(-50%);
+}
+
+@keyframes panParallax {
+    from {
+        transform: translateY(-50%) translateX(0);
+    }
+
+    to {
+        transform: translateY(-50%) translateX(-50%);
+    }
+}
+
 @keyframes pulseWeather {
     from {
         opacity: 0.3;
