@@ -245,6 +245,7 @@ function App() {
                                     events={battleResult.events}
                                     currentTick={currentTick}
                                     snakes={battleResult.snakes}
+                                    params={envParams}
                                 />
                                 <div className="replay-controls">
                                     <button onClick={() => setIsPlaying(!isPlaying)}>{isPlaying ? 'PAUSE' : 'PLAY'}</button>
