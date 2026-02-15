@@ -49,9 +49,31 @@ export class Simulation {
         }
 
         const snakesToUpdate = this.snakes.filter(s => s.alive);
+        this.applyBroodBonds(snakesToUpdate);
+
         for (const snake of snakesToUpdate) {
             this.updateSnake(snake, isClash);
             if (this.isWaitingForChoice) break; // Pause simulation
+        }
+
+        applyBroodBonds(snakes: SnakeState[]) {
+            snakes.forEach(s1 => {
+                const nearbyAllies = snakes.filter(s2 =>
+                    s1.id !== s2.id &&
+                    s1.team === s2.team &&
+                    Math.abs(s1.pos.x - s2.pos.x) <= 2 &&
+                    Math.abs(s1.pos.y - s2.pos.y) <= 2
+                );
+
+                if (nearbyAllies.length > 0) {
+                    // Broad Bond: Boost Speed/Agility when near allies
+                    s1.currentStats.agility = s1.baseStats.agility + 2;
+                    if (!s1.statuses.includes('Bonded')) s1.statuses.push('Bonded');
+                } else {
+                    s1.currentStats.agility = s1.baseStats.agility;
+                    s1.statuses = s1.statuses.filter(st => st !== 'Bonded');
+                }
+            });
         }
 
         if (!this.isWaitingForChoice) {

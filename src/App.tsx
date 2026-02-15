@@ -99,6 +99,10 @@ function App() {
         if (engineVersion === 'v6.0' && result.sim.isWaitingForChoice) {
             setActiveSim(result.sim)
             processSimEvents(result.sim)
+        } else if (engineVersion === 'v7.0') {
+            // In v7.0, the sim handles choices autonomously without setting isWaitingForChoice
+            setBattleResult(result)
+            setGameState('recap')
         } else {
             setBattleResult(result)
             setGameState('recap')
@@ -110,7 +114,14 @@ function App() {
         const pending = sim.events.find((e: any) => e.type === 'PENDING_CHOICE' && !e.processed)
         if (pending) {
             pending.processed = true
-            setCurrentEncounter(pending)
+            if (engineVersion === 'v7.0') {
+                // Auto-resolve in v7.0
+                sim.handleChoice(pending.snakeId, 'RUN'); // Placeholder, triggerEncounter already handles it in sim.ts v7
+                // Wait, in v7.0 triggerEncounter already calls resolveEncounterChoice!
+                // So we don't need to do anything here for v7.0, just let it run.
+            } else {
+                setCurrentEncounter(pending)
+            }
         }
     }
 
