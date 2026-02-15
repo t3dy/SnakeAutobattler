@@ -298,7 +298,20 @@ function App() {
                                         {(engineVersion !== 'v1.0') && (
                                             <p className="snake-bio"><em>{s.bio}</em></p>
                                         )}
-                                        <p>{s.story}</p>
+                                        {typeof s.story === 'string' ? (
+                                            <p>{s.story}</p>
+                                        ) : (
+                                            <div className="story-timeline">
+                                                {s.story.visuals.map((arc: any, j: number) => (
+                                                    <div key={j} className="story-arc">
+                                                        <div className="arc-depiction-placeholder">
+                                                            📷 {arc.visualPrompt}
+                                                        </div>
+                                                        <p>{arc.text}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
