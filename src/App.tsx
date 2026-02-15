@@ -183,9 +183,10 @@ function App() {
                                 { id: 'v4.0', title: 'SAGA ENGINE', desc: 'Story Compiler groups events into dramatic arcs.' },
                                 { id: 'v5.0', title: 'HONOR & STEEL', desc: 'Themes (Sci-Fi/Medieval) and Hot-Seat Multiplayer.' },
                                 { id: 'v6.0', title: 'THE MERCHANT', desc: 'Interrupted simulation with Manual Tactics: Run, Hide, Fight.' },
-                                { id: 'v7.0', title: 'THE GHOST', desc: 'Autonomous Resolve, Typed Adversity, and Causal Cascades.' }
+                                { id: 'v7.0', title: 'THE GHOST', desc: 'Autonomous Resolve, Typed Adversity, and Causal Cascades.' },
+                                { id: 'v8.0', title: 'CHRONICLE', desc: 'The Living Chronicle. Cinematic camera, SVG morphing, and atmospheric layering.' }
                             ].map(v => (
-                                <div key={v.id} className={`version-card ${engineVersion === v.id ? 'active' : ''}`} onClick={() => selectVersion(v.id as any)}>
+                                <div key={v.id} className={`version-card ${engineVersion === v.id ? 'active' : ''} ${v.id === 'v8.0' ? 'v8-glitch' : ''}`} onClick={() => selectVersion(v.id as any)}>
                                     <div className="version-tag">{v.id}</div>
                                     <h3>{v.title}</h3>
                                     <p>{v.desc}</p>
@@ -196,7 +197,7 @@ function App() {
 
                         <div className="tech-footer">
                             <span>Engine Status: <span className="status-online">Operational</span></span>
-                            <span>Latest Update: v7.0 (Ghost in the Scales)</span>
+                            <span>Latest Update: v8.0 (The Living Chronicle)</span>
                         </div>
                     </div>
                 )}
@@ -244,11 +245,17 @@ function App() {
                         {activeSim ? (
                             <div className="scene-container">
                                 <h2>THE SAGA UNFOLDS</h2>
+                                <Arena
+                                    world={activeSim.world}
+                                    events={activeSim.events}
+                                    currentTick={currentTick}
+                                    snakes={activeSim.snakes}
+                                    params={{ ...envParams, version: engineVersion }}
+                                />
                                 {currentEncounter && (
                                     <div className="choice-modal">
                                         <div className="scene-description">
                                             <p>A critical junction in the {currentEncounter.terrain}!</p>
-                                            <div className="scene-visual">📷 [DEPICTION REQUIRED]</div>
                                         </div>
                                         <div className="choice-options">
                                             <button onClick={() => makeChoice('RUN')}>RUN</button>
@@ -257,7 +264,6 @@ function App() {
                                         </div>
                                     </div>
                                 )}
-                                {!currentEncounter && <p className="loading-text">Advancing time...</p>}
                             </div>
                         ) : (
                             <div className="pre-battle">
