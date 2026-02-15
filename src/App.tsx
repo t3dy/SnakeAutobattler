@@ -298,6 +298,11 @@ function App() {
                                         {(engineVersion !== 'v1.0') && (
                                             <p className="snake-bio"><em>{s.bio}</em></p>
                                         )}
+                                        {(engineVersion === 'v5.0') && (
+                                            <div className="snake-stats-summary">
+                                                <span>Honor: {s.honor}</span> | <span>XP: {s.experience}</span> | <span>Profit: {s.scavengeProfit}g</span>
+                                            </div>
+                                        )}
                                         {typeof s.story === 'string' ? (
                                             <p>{s.story}</p>
                                         ) : (
