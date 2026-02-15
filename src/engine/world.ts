@@ -1,9 +1,13 @@
+```typescript
 import { Cell, TerrainType, EnvironmentParams } from './types';
 
 export function generateWorld(
-    params: EnvironmentParams = { climate: 'Standard', fauna: 'Standard', flora: 'Standard' },
-    width: number = 16,
-    height: number = 12
+  params: EnvironmentParams = { 
+    climate: 'Standard', fauna: 'Standard', flora: 'Standard',
+    mode: 'SOLO', theme: 'MEDIEVAL'
+  },
+  width: number = 16, 
+  height: number = 12
 ): Cell[][] {
     const world: Cell[][] = [];
     const terrainTypes: TerrainType[] = ['forest', 'desert', 'river', 'mountain'];

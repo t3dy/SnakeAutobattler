@@ -5,14 +5,17 @@ import { SnakeDraft, SnakeState, Stats, EnvironmentParams } from './types';
 import { BODIES, AFFINITIES, QUIRKS } from './traits';
 
 export function runBattle(
-    playerTeam: SnakeDraft[],
-    enemyTeam: SnakeDraft[],
-    envParams: EnvironmentParams = { climate: 'Standard', fauna: 'Standard', flora: 'Standard' }
+    playerDrafts: SnakeDraft[],
+    enemyDrafts: SnakeDraft[],
+    params: EnvironmentParams = {
+        climate: 'Standard', fauna: 'Standard', flora: 'Standard',
+        mode: 'SOLO', theme: 'MEDIEVAL'
+    }
 ) {
-    const world = generateWorld(envParams);
+    const world = generateWorld(params);
     const snakes: SnakeState[] = [
-        ...playerTeam.map((d, i) => createSnake(d, `PlayerSnake_${i}`, 'player', { x: 0, y: Math.floor(i * 4) })),
-        ...enemyTeam.map((d, i) => createSnake(d, `EnemySnake_${i}`, 'enemy', { x: 15, y: Math.floor(i * 4) }))
+        ...playerDrafts.map((d, i) => createSnake(d, `PlayerSnake_${i}`, 'player', { x: 0, y: Math.floor(i * 4) })),
+        ...enemyDrafts.map((d, i) => createSnake(d, `EnemySnake_${i}`, 'enemy', { x: 15, y: Math.floor(i * 4) }))
     ];
 
     const sim = new Simulation(world, snakes, envParams);
