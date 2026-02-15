@@ -1864,3 +1864,15 @@ button:hover {
 .v15-hidden {
     display: none !important;
 }
+
+.legacy-warning {
+    color: #ffd700;
+    font-size: 0.85rem;
+    font-style: italic;
+    margin-bottom: 1.5rem;
+    padding: 0.8rem;
+    border-left: 2px solid #ffd700;
+    background: rgba(255, 215, 0, 0.05);
+    text-align: left;
+    max-width: 600px;
+}

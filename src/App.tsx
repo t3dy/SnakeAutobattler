@@ -457,6 +457,9 @@ function App() {
 
                         <div className="archive-version-section">
                             <h3>LEGACY VERSIONS</h3>
+                            <div className="legacy-warning">
+                                ⚠️ [SYSTEM NOTICE]: Legacy expeditions (v1.0 - v14.0) are maintained for historical continuity but may exhibit architectural instability.
+                            </div>
                             <SnakeSkinLayout
                                 versions={versions}
                                 onSelectVersion={(id) => selectVersion(id as EngineVersion)}
