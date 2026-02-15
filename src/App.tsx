@@ -157,6 +157,27 @@ function App() {
         return () => { if (playIntervalRef.current) clearInterval(playIntervalRef.current) }
     }, [isPlaying])
 
+    const versions = [
+        { id: 'v1.0', title: 'PRIMAL LOGS', desc: 'The core simulation loop. Pure functional movement and simple terminal-style event tracing.' },
+        { id: 'v2.0', title: 'IDENTITY SPARK', desc: 'Introduction of the Drafting System. Snakes gain Traits, Quirks, and uniquely generated Origin Bios.' },
+        { id: 'v3.0', title: 'GIFT OF SIGHT', desc: 'Transition to React/Vite. The Emoji Arena introduces real-time visual replays of the carnage.' },
+        { id: 'v4.0', title: 'SAGA ENGINE', desc: 'The Story Compiler is born. Events are grouped into dramatic arcs (Exploration, Conflict, Survival).' },
+        { id: 'v5.0', title: 'HONOR & STEEL', desc: 'Multilayered themes (Sci-Fi/Medieval) and Hot-Seat Multiplayer. Introduces the Storm mechanic.' },
+        { id: 'v6.0', title: 'THE MERCHANT', desc: 'Interrupted simulation loop. Manual tactics: Run, Hide, or Fight. Persistent event stacking.' },
+        { id: 'v7.0', title: 'THE GHOST', desc: 'Surgical causality. Autonomous Resolve based on personality, Typed Adversity, and Causal Cascades.' },
+        { id: 'v8.0', title: 'CHRONICLE', desc: 'The Living Chronicle. Cinematic camera, SVG morphing, atmospheric layering, and procedural weather.' }
+    ];
+
+    const VersionCard = ({ id, title, desc }: { id: string, title: string, desc: string }) => (
+        <div
+            className={`megaman-card ${engineVersion === id ? 'active' : ''} ${id === 'v8.0' ? 'v8-glitch' : ''}`}
+            onClick={() => selectVersion(id as any)}
+        >
+            <div className="card-id">{id}</div>
+            <div className="card-title">{title}</div>
+        </div>
+    );
+
     return (
         <div className="app-container">
             <header>

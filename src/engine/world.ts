@@ -17,7 +17,7 @@ export function generateWorld(
             'forest': 1, 'desert': 1, 'river': 1, 'mountain': 1
         };
 
-        if (params.climate === 'Tropical') {
+        if (params.climate === 'Lush') {
             weights.river = 4;
             weights.forest = 3;
             weights.desert = 0.5;
@@ -25,10 +25,11 @@ export function generateWorld(
             weights.desert = 5;
             weights.mountain = 2;
             weights.river = 0.2;
-        } else if (params.climate === 'Alpine') {
-            weights.mountain = 4;
-            weights.river = 1;
-            weights.forest = 2;
+        } else if (params.climate === 'Binary') {
+            weights.mountain = 3;
+            weights.river = 0.5;
+            weights.forest = 0.5;
+            weights.desert = 2;
         }
 
         const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
@@ -76,8 +77,8 @@ export function generateWorld(
     }
 
     // Pass 3: Food & Hazards
-    const foodChance = params.fauna === 'High' ? 0.08 : params.fauna === 'Sparse' ? 0.02 : 0.04;
-    const floraMod = params.flora === 'Dense' ? 1.5 : params.flora === 'Barren' ? 0.5 : 1.0;
+    const foodChance = params.fauna === 'Swarm' ? 0.08 : params.fauna === 'Sparse' ? 0.02 : 0.04;
+    const floraMod = params.flora === 'Dense' ? 1.5 : params.flora === 'None' ? 0.5 : 1.0;
 
     for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
