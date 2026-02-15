@@ -1,0 +1,90 @@
+[
+    {
+        "id": "ACT_RETREAT_PANIC",
+        "layer": "ACT",
+        "category": "CHOREOGRAPHY",
+        "trigger": {
+            "encounterType": "RETREAT_PANIC"
+        },
+        "priority": 10,
+        "weight": 1,
+        "template": "scrambling blindly to escape the jaws of the beast."
+    },
+    {
+        "id": "ACT_RETREAT_SMART",
+        "layer": "ACT",
+        "category": "CHOREOGRAPHY",
+        "trigger": {
+            "encounterType": "RETREAT_SMART"
+        },
+        "priority": 10,
+        "weight": 1,
+        "template": "finding a tactical gap in the enemy's defense to slip away."
+    },
+    {
+        "id": "ACT_AMBUSH",
+        "layer": "ACT",
+        "category": "CHOREOGRAPHY",
+        "trigger": {
+            "encounterType": "AMBUSH"
+        },
+        "priority": 10,
+        "weight": 1,
+        "template": "striking from the shadows before the target could react."
+    },
+    {
+        "id": "ACT_CLASH",
+        "layer": "ACT",
+        "category": "CHOREOGRAPHY",
+        "trigger": {
+            "encounterType": "CLASH"
+        },
+        "priority": 10,
+        "weight": 1,
+        "template": "trading blows in a brutal exchange of fang and scale."
+    },
+    {
+        "id": "act_rehearse_scout",
+        "layer": "ACT",
+        "category": "ACT_REACTION",
+        "trigger": {
+            "trait": "Scout",
+            "action": "RUN",
+            "encounterType": "EVADE"
+        },
+        "template": "{snakeName} noted the vector of the threat and vanished before it could lock on.",
+        "priority": 50
+    },
+    {
+        "id": "act_clash_soldier",
+        "layer": "ACT",
+        "category": "ACT_REACTION",
+        "trigger": {
+            "trait": "Defender",
+            "action": "FIGHT",
+            "encounterType": "CLASH"
+        },
+        "template": "{snakeName} met the assault shield-first, refusing to yield an inch of territory.",
+        "priority": 50
+    },
+    {
+        "id": "act_ambush_generic",
+        "layer": "ACT",
+        "category": "ACT_REACTION",
+        "trigger": {
+            "encounterType": "AMBUSH",
+            "action": "STAY_HIDDEN"
+        },
+        "template": "The trap snapped shut on empty air; {snakeName} was already gone."
+    },
+    {
+        "id": "act_ambush_fail",
+        "layer": "ACT",
+        "category": "ACT_REACTION",
+        "trigger": {
+            "encounterType": "AMBUSH",
+            "action": "REVEALED"
+        },
+        "template": "{snakeName} hissed as the shadows betrayed him."
+    }
+]

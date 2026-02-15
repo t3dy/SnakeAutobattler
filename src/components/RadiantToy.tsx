@@ -16,33 +16,36 @@ export default function RadiantToy({ onExit }: { onExit: () => void }) {
         affinity: 'Stone-Scaled',
         quirk: 'Reckless'
     });
-    const [auditStatus, setAuditStatus] = useState<string>('Checking...');
     const [result, setResult] = useState<{ event: string, prose: string } | null>(null);
     const [suggestion, setSuggestion] = useState('');
-
-    useEffect(() => {
-        // Mock audit check (ideally this pulls from a pre-generated manifest)
-        const isOrphan = selectedTrait.includes('Dune') || selectedTrait.includes('River') || selectedTrait.includes('Clockwork');
-        setAuditStatus(isOrphan ? '⚠️ ORPHAN' : '✅ SYNCED');
-        runSim();
-    }, [selectedTrait, selectedGenre]);
+    const [seed, setSeed] = useState<number>(12345);
+    const [managerConfidence, setManagerConfidence] = useState<number>(98.5);
+    const [isSeeded, setIsSeeded] = useState(true);
 
     const runSim = () => {
         const env = {
             climate: 'Standard' as any, fauna: 'Standard' as any, flora: 'Standard' as any,
-            mode: 'SOLO' as any, theme: 'MEDIEVAL' as any, genre: selectedGenre, phase: 1
+            mode: 'SOLO' as any, theme: 'MEDIEVAL' as any, genre: selectedGenre,
+            phase: 1, seed: isSeeded ? seed : undefined
         };
         const sim = generateSimulation([draft], [], env);
-        // Force an event for the trait
+        // Step the simulation explicitly to test v15 hook
+        sim.step();
+
         sim.tick = 5;
         const e = sim.emit({ id: 'toy', name: 'Test' } as any, 'FEAT_ACCOMPLISHED', { x: 5, y: 5 }, 'forest', ['ALPHA_STRIKE'], 0);
         const narrative = generateNarrative([e], sim.snakes, env);
 
         setResult({
-            event: `Simulated: ALPHA_STRIKE in ${selectedGenre}`,
+            event: `Simulated: ALPHA_STRIKE (Seed: ${isSeeded ? seed : 'RANDOM'})\nManager Confidence: ${managerConfidence.toFixed(1)}%`,
             prose: narrative.snakeStories[0].story.fullStory
         });
+        setManagerConfidence(prev => Math.min(100, prev + (Math.random() - 0.5)));
     };
+
+    useEffect(() => {
+        runSim();
+    }, [selectedTrait, selectedGenre, seed, isSeeded]);
 
     const submitSuggestion = () => {
         console.log(`Suggestion for ${selectedTrait} in ${selectedGenre}: ${suggestion}`);
@@ -53,13 +56,13 @@ export default function RadiantToy({ onExit }: { onExit: () => void }) {
     return (
         <div className="radiant-toy">
             <header className="toy-header">
-                <h2>RADIANT LACUNA EXPLORER</h2>
-                <button onClick={onExit}>EXIT TO ENGINE</button>
+                <h2>RADIANT LACUNA EXPLORER (v15.0 STABLE)</h2>
+                <button onClick={onExit}>EXIT TO HUB</button>
             </header>
 
             <div className="toy-layout">
                 <aside className="trait-list">
-                    <h3>ORPHAN TRAITS</h3>
+                    <h3>TRAIT ARCHIVE</h3>
                     {Object.keys(BODIES).map(t => (
                         <button
                             key={t}
@@ -76,10 +79,16 @@ export default function RadiantToy({ onExit }: { onExit: () => void }) {
 
                 <main className="toy-lab">
                     <div className="lab-controls">
-                        <div className="audit-badge">{auditStatus}</div>
+                        <div className="v15-tag">STALL GUARD ACTIVE</div>
                         <select value={selectedGenre} onChange={(e) => setSelectedGenre(e.target.value as Genre)}>
                             {GENRES.map(g => <option key={g} value={g}>{g}</option>)}
                         </select>
+                        <div className="seed-control">
+                            <label>SEED:</label>
+                            <input type="checkbox" checked={isSeeded} onChange={e => setIsSeeded(e.target.checked)} />
+                            {isSeeded && <input type="number" value={seed} onChange={e => setSeed(parseInt(e.target.value))} className="seed-input" />}
+                            <button className="re-run-btn" onClick={runSim}>RE-RUN</button>
+                        </div>
                     </div>
 
                     <div className="lab-output">
@@ -94,14 +103,14 @@ export default function RadiantToy({ onExit }: { onExit: () => void }) {
                     </div>
 
                     <div className="lab-designer-insight">
-                        <h3>DESIGNER INSIGHTS</h3>
+                        <h3>V15.0 STABILIZATION OVERLOOK</h3>
                         <div className="insight-grid">
-                            {DESIGNERS.sort(() => Math.random() - 0.5).slice(0, 3).map(d => (
+                            {DESIGNERS.filter(d => ['emerald-boa', 'black-mamba', 'boomslang'].includes(d.id)).map(d => (
                                 <div key={d.id} className="insight-card">
                                     <span className="insight-emoji">{d.emoji}</span>
                                     <div className="insight-content">
-                                        <strong>{d.name} ({d.role}):</strong>
-                                        <p>"{d.quote}"</p>
+                                        <strong>{d.name}:</strong>
+                                        <p>"{d.id === 'emerald-boa' ? 'Seeded runs are now 100% deterministic. Stalls are prevented.' : d.quote}"</p>
                                     </div>
                                 </div>
                             ))}

@@ -1,0 +1,76 @@
+[
+    {
+        "id": "ID_BOULDERBACK_RUN",
+        "layer": "ID",
+        "category": "IDENTITY",
+        "trigger": {
+            "trait": "Boulderback",
+            "action": "RUN"
+        },
+        "priority": 20,
+        "weight": 1,
+        "template": "{snakeName} lumbered forward,"
+    },
+    {
+        "id": "ID_WHIPCOIL_RUN",
+        "layer": "ID",
+        "category": "IDENTITY",
+        "trigger": {
+            "trait": "Whipcoil",
+            "action": "RUN"
+        },
+        "priority": 20,
+        "weight": 1,
+        "template": "{snakeName} flickered like a whip,"
+    },
+    {
+        "id": "ID_NEUTRAL_RUN",
+        "layer": "ID",
+        "category": "IDENTITY",
+        "trigger": {
+            "action": "RUN"
+        },
+        "priority": 1,
+        "weight": 1,
+        "template": "{snakeName} rushed ahead,"
+    },
+    {
+        "id": "ID_NEUTRAL_FIGHT",
+        "layer": "ID",
+        "category": "IDENTITY",
+        "trigger": {
+            "action": "FIGHT"
+        },
+        "priority": 1,
+        "weight": 1,
+        "template": "{snakeName} squared up,"
+    },
+    {
+        "id": "ID_BOULDERBACK_SLITHER",
+        "layer": "ID",
+        "category": "SLITHER",
+        "trigger": {
+            "trait": "Boulderback"
+        },
+        "priority": 10,
+        "template": "{snakeName} ground the stones to dust as it pushed through."
+    },
+    {
+        "id": "ID_WHIPCOIL_SLITHER",
+        "layer": "ID",
+        "category": "SLITHER",
+        "trigger": {
+            "trait": "Whipcoil"
+        },
+        "priority": 10,
+        "template": "{snakeName} was a blur of motion, barely touching the {terrain}."
+    },
+    {
+        "id": "ID_GENERIC_SLITHER",
+        "layer": "ID",
+        "category": "SLITHER",
+        "trigger": {},
+        "priority": 1,
+        "template": "{snakeName} traced a silent line through the world."
+    }
+]

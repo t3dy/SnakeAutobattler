@@ -1,4 +1,4 @@
-export type EngineVersion = 'v1.0' | 'v2.0' | 'v3.0' | 'v4.0' | 'v5.0' | 'v6.0' | 'v7.0' | 'v8.0' | 'v10.0' | 'v11.0' | 'v12.0' | 'v13.0';
+export type EngineVersion = 'v1.0' | 'v2.0' | 'v3.0' | 'v4.0' | 'v5.0' | 'v6.0' | 'v7.0' | 'v8.0' | 'v10.0' | 'v11.0' | 'v12.0' | 'v13.0' | 'v13.1' | 'v13.2' | 'v14.0' | 'v14.1' | 'v15.0';
 
 export enum GameStage {
     Draft = 'DRAFT',
@@ -126,6 +126,7 @@ export type EventType =
 
 export type CauseType = 'STORM' | 'TERRAIN' | 'HAZARD' | 'COMBAT' | 'NONE';
 export type ResolveOutcome = 'RUN' | 'HIDE' | 'FIGHT';
+export type EncounterType = 'AMBUSH' | 'CLASH' | 'EVADE' | 'RETREAT_SMART' | 'RETREAT_PANIC' | 'LETHAL' | 'FAILURE_NO_DEATH' | 'SKILL_ACQUIRED' | 'PHASE_ECHO'; // v14.0
 
 export interface GameEvent {
     id: string;
@@ -143,6 +144,10 @@ export interface GameEvent {
         aiState: string;
         flags: NarrativeFlag[];
         resolve?: number;
+        pacing?: {
+            phase: "KNOWN" | "UNKNOWN";
+            act: "OPENING" | "RISING" | "CRISIS" | "CLIMAX" | "AFTERMATH";
+        };
     };
     cause?: CauseType;
 }

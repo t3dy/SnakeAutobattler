@@ -1,0 +1,46 @@
+[
+    {
+        "id": "BIO_FOREST_1",
+        "layer": "BIO",
+        "category": "ENVIRONMENT",
+        "trigger": {
+            "terrain": "forest"
+        },
+        "priority": 10,
+        "weight": 1,
+        "cooldown": 5,
+        "template": "The canopy whispered with hidden malice."
+    },
+    {
+        "id": "BIO_DESERT_1",
+        "layer": "BIO",
+        "category": "ENVIRONMENT",
+        "trigger": {
+            "terrain": "desert"
+        },
+        "priority": 10,
+        "weight": 1,
+        "cooldown": 5,
+        "template": "Heat waves distorted the horizon."
+    },
+    {
+        "id": "bio_scout_01",
+        "layer": "BIO",
+        "category": "BIO_INTRO",
+        "trigger": {
+            "trait": "Scout"
+        },
+        "template": "{snakeName}, a forward observer for the collective, scanned the horizon.",
+        "priority": 50
+    },
+    {
+        "id": "bio_soldier_01",
+        "layer": "BIO",
+        "category": "BIO_INTRO",
+        "trigger": {
+            "trait": "Defender"
+        },
+        "template": "{snakeName} held the line, scales hardened by a hundred skirmishes.",
+        "priority": 50
+    }
+]

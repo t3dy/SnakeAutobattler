@@ -1,146 +1,13 @@
 import { GameEvent, SnakeState, EnvironmentParams, Genre } from './types';
-import { BODIES, INSTINCTS, AFFINITIES, QUIRKS } from './traits';
+import { NarrativeComposer, BeatContext } from './NarrativeSystem';
 
-// v13.2 Narrative Expansion: The Trait Text Registry
-// Maps specific constraints (Body, Instinct, Affinity, etc.) to custom flavor text.
-export interface TraitTrigger {
-    requires: string[]; // e.g., ['Boulderback', 'desert'] or ['high_speed']
-    text: string[];
-    priority: number; // Higher priority overrides generic text
-}
+// v14.0 The Narrative Skald
+// The central composer instance.
+export const composer = new NarrativeComposer();
 
-export const TRAIT_TEXT_REGISTRY: TraitTrigger[] = [
-    // --- BODY SPECIFIC ---
-    {
-        requires: ['Boulderback', 'RUN'],
-        text: [
-            "Refusing to panic, {snakeName} lumbered through the {terrain} like a runaway siege engine.",
-            "{snakeName} plowed through obstacles rather than dodging, a juggernaut of scales.",
-            "The ground shook as {snakeName} gained momentum, ignoring the {terrain}'s roughness."
-        ],
-        priority: 10
-    },
-    {
-        requires: ['Whipcoil', 'RUN'],
-        text: [
-            "{snakeName} became a blur, a ribbon of motion cutting through the {terrain}.",
-            "Too fast for the eye to follow, {snakeName} was already gone before the dust settled.",
-            "A snap of the tail and {snakeName} flickered away, defying friction."
-        ],
-        priority: 10
-    },
-    {
-        requires: ['Gilded Hood', 'ANY'],
-        text: [
-            "{snakeName} flared its hood, demanding the {terrain} acknowledge its presence.",
-            "Even in retreat, {snakeName} maintained a regal posture, hissing disdainfully.",
-            "The light caught {snakeName}'s scales, turning the moment into a dazzling display."
-        ],
-        priority: 5
-    },
-
-    // --- INSTINCT SPECIFIC ---
-    {
-        requires: ['Cowardly Clever', 'FIGHT'],
-        text: [
-            "Cornered and panic-stricken, {snakeName} lashed out blindly at the threat!",
-            "{snakeName} shrieked a silent frequency of terror, biting effectively despite the fear.",
-            "Fighting only because there was no hole to hide in, {snakeName} struck wildly."
-        ],
-        priority: 10
-    },
-    {
-        requires: ['Bloodrush', 'RUN'],
-        text: [
-            "{snakeName} retreated, but only to circle back for a better killing angle.",
-            "The withdrawal was tactical; {snakeName} was already visualizing the counter-attack.",
-            "Seething with adrenaline, {snakeName} forced itself to pull back from the bloodshed."
-        ],
-        priority: 10
-    },
-
-    // --- AFFINITY CLASHES & SYNERGIES ---
-    {
-        requires: ['Sun-Touched', 'desert'],
-        text: [
-            "The scorching sand fueled {snakeName}, heat radiating from its scales like a weapon.",
-            "{snakeName} moved through the dunes like liquid glass, perfectly at home in the furnace.",
-            "While others withered, {snakeName} drew strength from the merciless sun."
-        ],
-        priority: 20
-    },
-    {
-        requires: ['Mist-Bound', 'river'],
-        text: [
-            "In the damp air, {snakeName} dissolved into the mist, becoming invisible and everywhere.",
-            "The water was an ally; {snakeName} flowed with the current, striking from the foam.",
-            "Fog condensed on {snakeName}'s scales, creating a cloaking field of vapor."
-        ],
-        priority: 20
-    },
-    {
-        requires: ['Void-Blessed', 'ANY'],
-        text: [
-            "{snakeName} glitched forward, frames skipping as it defied local physics.",
-            "The geometry around {snakeName} seemed to fold unnaturally.",
-            "A static hiss accompanied {snakeName}'s movement, a tear in the simulation."
-        ],
-        priority: 15
-    },
-
-    // --- GENRE SPECIFIC (v13.2) ---
-    {
-        requires: ['ZOMBIE', 'DAMAGE'],
-        text: [
-            "{snakeName} didn't flinch. Chunks of flesh tore away, but the hunger remained.",
-            "The wound leaked grey fluid instead of blood. {snakeName} persisted.",
-            "Pain was a distant memory for {snakeName}'s decayed nervous system."
-        ],
-        priority: 15
-    },
-    {
-        requires: ['SLAPSTICK', 'KO'],
-        text: [
-            "With a comical WHUMP, {snakeName} flattened into a pancake and drifted away.",
-            "Stars circled {snakeName}'s head—literally—before it collapsed with a wheeze.",
-            "A sign reading 'OUCH' appeared briefly as {snakeName} was knocked out."
-        ],
-        priority: 20
-    },
-    {
-        requires: ['NOIR', 'STAY_HIDDEN'],
-        text: [
-            "\"{terrain} is a good place to die,\" {snakeName} thought, merging with the shadows.",
-            "The shadows were long, but {snakeName}'s patience was longer.",
-            "Rain or not, {snakeName} knew how to wait out the trouble."
-        ],
-        priority: 15
-    }
-];
-
-const GENERIC_RUN = [
-    "{snakeName} bolted as the {terrain} whipped past in a blurred streak.",
-    "A slip of the scales and a recovery: {snakeName} narrowly keeps the pace.",
-    "The chase is on. {terrain} provides no ease for the fleeing heart.",
-    "With a desperate leap, {snakeName} clears a jagged {terrain} shard.",
-    "Foliage becomes a transient shield for the sprinting {snakeName}."
-];
-
-const GENERIC_HIDE = [
-    "{snakeName} merges with the shadows of the {terrain}, becoming one with the dark.",
-    "Leaf camouflage is perfect; {snakeName} is a ghost in the green.",
-    "Freezing under the spotlight of the sun, {snakeName} holds its breath.",
-    "A moment of control; even the Jacobson's organ is still.",
-    "The predator sniffs close; {snakeName} feels the vibration of death."
-];
-
-const GENERIC_FIGHT = [
-    "A quick strike duel in the {terrain}; fangs clash with scales.",
-    "The grapple is long and agonizing; {snakeName} fights for every inch.",
-    "A reversal moment! {snakeName} turns the tide of the struggle.",
-    "Skill activation! {snakeName} channels the spirit of the Architect.",
-    "Scales break and blood spills on the unforgiving {terrain}."
-];
+// Legacy generic fallbacks for safety (though Composer has them too)
+// We keep them here if needed for direct access, or remove if fully migrated.
+// For now, let's trust the composer but keep the functions that call it.
 
 const TERRAIN_DESCRIPTORS: Record<string, string> = {
     'forest': 'twisting branches and damp leaves',
@@ -186,59 +53,107 @@ function generateGenreRecap(events: GameEvent[], snakes: SnakeState[], genre: Ge
 
 function compileGenreArcs(snakeEvents: GameEvent[], snake: SnakeState, genre: Genre, resonance: number) {
     const arcs: any[] = [];
-    const draft = snake.draft;
 
     const stagedEncounters = snakeEvents.filter(e => e.type === 'ENCOUNTER_RESULT');
 
     stagedEncounters.forEach(e => {
-        const choice = e.tags[0]; // ESCAPE, STAY_HIDDEN, REVEALED
+        const choice = e.tags[0]; // ESCAPE, STAY_HIDDEN, REVEALED, FIGHT
         const terrainKey = e.terrain || 'forest';
         const terrainDesc = TERRAIN_DESCRIPTORS[terrainKey] || terrainKey;
 
-        // Build context for the Trait Registry
-        const contextFn = (trigger: TraitTrigger) => {
-            const reqs = trigger.requires;
-            // Check if all requirements are met
-            return reqs.every(r => {
-                if (r === 'ANY') return true;
-                if (r === choice) return true;
-                if (r === terrainKey) return true;
-                if (r === genre) return true;
+        // Map choice to Action & EncounterType
+        let action = 'RUN';
+        let encounterType: any = 'GENERIC'; // Default
 
-                // Check Snake Props
-                if (draft.body === r) return true;
-                if (draft.instinct === r) return true;
-                if (draft.affinity === r) return true;
-
-                // Check Flags? (Optional, if we expose them clearly)
-                return false;
-            });
-        };
-
-        // Find best match
-        const matches = TRAIT_TEXT_REGISTRY.filter(contextFn);
-        matches.sort((a, b) => b.priority - a.priority); // Highest first
-
-        let templates = GENERIC_RUN;
-        if (choice === 'STAY_HIDDEN' || choice === 'REVEALED') templates = GENERIC_HIDE;
-        if (choice === 'FIGHT') templates = GENERIC_FIGHT;
-
-        // Override if match found
-        if (matches.length > 0) {
-            templates = matches[0].text;
+        if (choice === 'ESCAPE') {
+            action = 'RUN';
+            encounterType = 'EVADE';
+        }
+        if (choice === 'STAY_HIDDEN') {
+            action = 'STAY_HIDDEN';
+            encounterType = 'AMBUSH'; // Successfully hiding from ambush
+        }
+        if (choice === 'REVEALED') {
+            action = 'STAY_HIDDEN'; // Failed hide
+            encounterType = 'AMBUSH';
+        }
+        if (choice === 'VICTORY' || choice === 'DEFEAT' || choice === 'FIGHT') {
+            action = 'FIGHT';
+            encounterType = 'CLASH';
+        }
+        if (choice === 'KO' || (e.tags && e.tags.includes('KO'))) {
+            action = 'KO';
+            encounterType = 'DEATH';
         }
 
-        let text = templates[Math.floor(Math.random() * templates.length)];
-        text = text.replace(/{snakeName}/g, snake.name).replace(/{terrain}/g, terrainDesc);
+        const context: BeatContext = {
+            seed: 0, // Placeholder
+            tick: e.tick,
+            phase: e.snapshot?.pacing?.phase || 'KNOWN',
+            actLabel: e.snapshot?.pacing?.act || 'RISING',
+            snake: snake,
+            environment: { terrain: terrainKey },
+            encounter: {
+                type: encounterType,
+                intensity: 50,
+                tags: e.tags
+            },
+            action: action,
+            radiance: {
+                value: resonance,
+                band: resonance > 80 ? 'HIGH' : resonance < 40 ? 'LOW' : 'MID'
+            },
+            genre: genre, // v14.1 Genre Isolation
+            history: {
+                usedTemplateIds: [],
+                perTemplateCooldowns: {}
+            }
+        };
+
+        // v14.0: Delegate to Composer
+        let text = composer.composeBeat(context);
+
+        // Fallback interpolation if Composer didn't do it (Composer logic handles it, but just in case)
+        if (!text) text = `${snake.name} moved through the ${terrainDesc}.`;
 
         if (resonance < 60) text = `[BLEED] ${text}`;
 
         arcs.push({ title: choice, story: text });
     });
 
-    // Fallback if no encounters
+    // v14.1 Slither Logic: If no encounters occurred, we still want a trait-rich story.
+    // We treat the "Slither" as a special beat context.
     if (arcs.length === 0 && snakeEvents.length > 0) {
-        arcs.push({ title: 'THE SLITHER', story: `${snake.name} moved through the world, a silent line of intent.` });
+        const lastMove = [...snakeEvents].reverse().find(e => e.type === 'MOVE');
+        const context: BeatContext = {
+            seed: 0,
+            tick: lastMove?.tick || 0,
+            phase: lastMove?.snapshot?.pacing?.phase || 'KNOWN',
+            actLabel: lastMove?.snapshot?.pacing?.act || 'OPENING',
+            snake: snake,
+            environment: { terrain: lastMove?.terrain || 'forest' },
+            encounter: {
+                type: 'EVADE', // Light encounter type for slithering
+                intensity: 10,
+                tags: []
+            },
+            action: 'MOVE',
+            radiance: { value: resonance, band: resonance > 80 ? 'HIGH' : resonance < 40 ? 'LOW' : 'MID' },
+            genre: genre, // v14.1 Genre Isolation
+            history: { usedTemplateIds: [], perTemplateCooldowns: {} }
+        };
+
+        // We override the compose logic to look for SLITHER category specifically if we wanted, 
+        // but for now let's just use the existing composer and a special "MOVE" action.
+        // Actually, let's add a `composeSlither` or similar, or just trust the registry.
+        // I added SLITHER category to the composer, so let's use it.
+
+        // Minor modification to Composer needed to handle SLITHER category? 
+        // No, I'll just manually call selectTemplate for SLITHER in a new method or use the generic one.
+        // Let's keep it simple: just call composeBeat with a specific context.
+
+        const slitherText = composer.composeBeat(context); // This will need the composer to understand MOVE action
+        arcs.push({ title: 'THE SLITHER', story: slitherText || `${snake.name} moved through the world.` });
     }
 
     return {

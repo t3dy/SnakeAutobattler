@@ -20,18 +20,21 @@ export function generateWorld(
     const hazardDensityField = generateNoiseField(width, height, 0.3);
 
     // Phase 2: Derive Terrain from Fields
+    const climateBias = params.climate === 'Arid' ? 0.2 : params.climate === 'Lush' ? -0.2 : 0;
+    const moistureThreshold = 0.7 + climateBias;
+    const heatThreshold = 0.6 - climateBias;
+
     for (let y = 0; y < height; y++) {
         const row: Cell[] = [];
         for (let x = 0; x < width; x++) {
             const heat = sampleField(heatField, x, y);
             const moisture = sampleField(moistureField, x, y);
             const elevation = sampleField(elevationField, x, y);
-            const hazardDensity = sampleField(hazardDensityField, x, y);
 
             let terrain: TerrainType = 'forest';
             if (elevation > 0.7) terrain = 'mountain';
-            else if (moisture > 0.7) terrain = 'river';
-            else if (heat > 0.6 && moisture < 0.3) terrain = 'desert';
+            else if (moisture > moistureThreshold) terrain = 'river';
+            else if (heat > heatThreshold && moisture < 0.3) terrain = 'desert';
 
             row.push({
                 x, y,
@@ -50,10 +53,10 @@ export function generateWorld(
         world.push(row);
     }
 
-    // Phase 3: Populate Goods & Hazards (Genre-biased)
-    const foodRate = genreDef.specialRules.spawnFoodRate;
-    const hazardRate = genreDef.specialRules.spawnHazardRate;
-    const treasureRate = genreDef.specialRules.treasureRate;
+    // Phase 3: Populate Goods & Hazards (Genre & Params-biased)
+    const foodRate = (genreDef.specialRules.spawnFoodRate || 1) * (params.flora === 'Dense' ? 2 : params.flora === 'None' ? 0.2 : 1);
+    const hazardRate = (genreDef.specialRules.spawnHazardRate || 1) * (params.fauna === 'Hostile' ? 2 : params.fauna === 'Sparse' ? 0.5 : 1);
+    const treasureRate = genreDef.specialRules.treasureRate || 1;
 
     for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
@@ -72,13 +75,13 @@ export function generateWorld(
                     { kind: '🕳️', damage: 8 },
                     { kind: '🪨', damage: 12 }
                 ];
-                if (params.genre === 'SLAPSTICK') hazards.push({ kind: '🍌', damage: 5 }); // Banana peel
-                if (params.genre === 'SPY') hazards.push({ kind: '🚨', damage: 15 }); // Laser alarm
+                if (params.genre === 'SLAPSTICK') hazards.push({ kind: '🍌', damage: 5 });
+                if (params.genre === 'SPY') hazards.push({ kind: '🚨', damage: 15 });
 
                 cell.hazard = hazards[Math.floor(Math.random() * hazards.length)];
             }
 
-            // Treasure spawning (v11/v12 Exclusive)
+            // Treasure spawning
             if (Math.random() < 0.03 * treasureRate && !cell.food && !cell.hazard) {
                 cell.treasure = {
                     id: `tr-${Math.random().toString(36).substr(2, 5)}`,

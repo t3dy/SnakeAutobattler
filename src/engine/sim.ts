@@ -4,6 +4,7 @@ import {
 import { BODIES, INSTINCTS, AFFINITIES, QUIRKS } from './traits';
 import { generateNarrative } from './narrate';
 import { RadianceEngine } from './radiance';
+import { DeterministicRandom } from './random';
 
 export class Simulation {
     world: Cell[][]; // Changed from `World` to `Cell[][]` to match original type, as `World` was not defined.
@@ -15,14 +16,22 @@ export class Simulation {
     stormLevel: number = 0;
     radianceScore: number = 100; // v13.0 Meta-Metric
     synergyTags: string[] = [];  // v13.0 Active Synergies
+
+    public rng: DeterministicRandom; // v15.0 Seeded PRNG
     currentEncounterData: any = null; // v13.0 Drama Data
     radiance: RadianceEngine; // v13.0 Verifiable Metric
+    lastActivityTick: number = 0; // v15.0 Branch Manager tracking
 
-    constructor(world: Cell[][], snakes: SnakeState[], envParams: EnvironmentParams) {
+    // v14.0 Narrative Pacing
+    pacingPhase: "KNOWN" | "UNKNOWN" = "KNOWN";
+    pacingAct: "OPENING" | "RISING" | "CRISIS" | "CLIMAX" | "AFTERMATH" = "OPENING";
+
+    constructor(world: Cell[][], snakes: SnakeState[], envParams: EnvironmentParams, seed: number = Date.now()) {
         this.world = world;
         this.snakes = snakes;
         this.envParams = envParams;
         this.radiance = new RadianceEngine();
+        this.rng = new DeterministicRandom(seed);
     }
 
     isWaitingForChoice: boolean = false;
@@ -32,7 +41,6 @@ export class Simulation {
         // In v6.0, run() only continues if not waiting for choice
         while (this.tick < this.maxTicks && this.snakes.some(s => s.alive) && !this.isWaitingForChoice) {
             this.step();
-            if (!this.isWaitingForChoice) this.tick++;
         }
         if (!this.snakes.some(s => s.alive) || this.tick >= this.maxTicks) {
             this.emitGlobal('BATTLE_END', { x: 0, y: 0 }, 'forest', ['battle_concluded']);
@@ -55,6 +63,17 @@ export class Simulation {
             this.advanceStorm();
         }
 
+        // v14.0 Narrative Pacing Update
+        const progress = this.tick / this.maxTicks;
+        if (progress < 0.2) this.pacingAct = "OPENING";
+        else if (progress < 0.5) this.pacingAct = "RISING";
+        else if (progress < 0.75) this.pacingAct = "CRISIS";
+        else if (progress < 0.9) this.pacingAct = "CLIMAX";
+        else this.pacingAct = "AFTERMATH";
+
+        // Simple phase shift logic (mirrors the 'PHASE_SHIFT' event at tick 30)
+        if (this.tick >= phaseTick) this.pacingPhase = "UNKNOWN";
+
         const snakesToUpdate = this.snakes.filter(s => s.alive);
         this.applyBroodBonds(snakesToUpdate);
 
@@ -72,28 +91,7 @@ export class Simulation {
         }
     }
 
-    // updateRadiance() { // Removed as per instruction
-    //     // v13.0: Calculate systemic drift. 
-    //     // Drift occurs if many snakes are alive but none are eating or fighting, 
-    //     // or if traits are triggered but have no narrative impact (simulated).
-    //     let delta = 0;
-    //     const activeSnakes = this.snakes.filter(s => s.alive);
-
-    //     // Reward action, penalize stagnation
-    //     const totalActivity = activeSnakes.reduce((acc, s) => acc + s.flags.length, 0);
-    //     if (totalActivity === 0) delta -= 1;
-    //     else delta += 0.5;
-
-    //     // Synergy Bonus
-    //     if (this.synergyTags.length > 0) delta += 1;
-
-    //     this.radianceScore = Math.max(0, Math.min(200, this.radianceScore + delta));
-
-    //     // Registry of 100 Improvements (Systemic representative)
-    //     if (this.tick % 10 === 0 && this.radianceScore > 150) {
-    //         this.emitGlobal('SYSTEM_RESONANCE', { x: 8, y: 8 }, 'forest', ['RESONANT_FLUX', 'v13_decadal_boost']);
-    //     }
-    // }
+    // Two blank lines for separation
 
     applyBroodBonds(snakes: SnakeState[]) {
         snakes.forEach(s1 => {
@@ -164,7 +162,7 @@ export class Simulation {
 
         if (move) {
             // v13.0 TripChance Check
-            if (snake.currentStats.speed > 3 && (Math.random() < 0.1)) {
+            if (snake.currentStats.speed > 3 && (this.rng.next() < 0.1)) {
                 this.emit(snake, 'SYSTEM_RESONANCE', move, this.world[move.y][move.x].terrain, ['TRIP_CHANCE', 'Slide Whistle!']);
                 snake.hp -= 5;
             }
@@ -198,7 +196,13 @@ export class Simulation {
                 snake.evolution['storm_ticks'] = 0;
             }
 
-            if (this.envParams.mode && Math.random() < 0.1 && !cell.food && !cell.hazard) {
+            // v14.0 Dynamic Drama Scaling
+            let encounterChance = 0.1;
+            if (this.pacingAct === 'RISING') encounterChance = 0.2;
+            if (this.pacingAct === 'CRISIS') encounterChance = 0.35;
+            if (this.pacingAct === 'CLIMAX') encounterChance = 0.7;
+
+            if (this.envParams.mode && this.rng.next() < encounterChance && !cell.food && !cell.hazard) {
                 this.triggerEncounter(snake, cell);
             }
 
@@ -214,6 +218,7 @@ export class Simulation {
 
             this.emit(snake, 'MOVE', move, cell.terrain, []);
             this.emit(snake, 'ENTER_TILE', move, cell.terrain, []);
+            this.lastActivityTick = this.tick;
         }
     }
 
@@ -232,7 +237,7 @@ export class Simulation {
         if (genre === 'ZOMBIE') {
             if (this.tick % 10 === 0) snake.hp -= 2; // Constant decay
         }
-        if (genre === 'SLAPSTICK' && Math.random() < 0.05) {
+        if (genre === 'SLAPSTICK' && this.rng.next() < 0.05) {
             this.emit(snake, 'FEAT_ACCOMPLISHED', snake.pos, this.world[snake.pos.y][snake.pos.x].terrain, ['SLIP_UP', 'Comical Slide!']);
             // Forced movement logic would go here
         }
@@ -279,6 +284,7 @@ export class Simulation {
 
     triggerEncounter(snake: SnakeState, cell: Cell) {
         this.isWaitingForChoice = true;
+        this.lastActivityTick = this.tick;
 
         // Pack Encounter Metadata for the Cinematic
         this.currentEncounterData = {
@@ -300,7 +306,7 @@ export class Simulation {
 
         if (quirk === 'Reckless' || instinct === 'Hunter') { // Fixed Aggressive to Hunter
             if (hpPerc > 0.3) return 'FIGHT';
-            return Math.random() > 0.5 ? 'FIGHT' : 'HIDE';
+            return this.rng.next() > 0.5 ? 'FIGHT' : 'HIDE';
         }
 
         if (quirk === 'Cautious' || hpPerc < 0.4) { // Fixed Cunning to Cautious
@@ -328,42 +334,48 @@ export class Simulation {
         const cell = this.world[snake.pos.y][snake.pos.x];
         const theme = this.envParams.theme;
         let outcome = '';
+        const successChance = this.calculateSuccessChance(choice, snake, cell);
+        const isSuccess = (this.rng.next() * 100) < successChance;
 
         if (choice === 'RUN') {
-            outcome = theme === 'SCIFI' ? 'The unit engaged thrusters, escaping the logic gate.' : 'He turned tail, slithering into the deep crevices.';
-            this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['ESCAPE', outcome]);
+            if (isSuccess) {
+                outcome = theme === 'SCIFI' ? 'The unit engaged thrusters, escaping the logic gate.' : 'He turned tail, slithering into the deep crevices.';
+                this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['ESCAPE', outcome, successChance.toString()]);
+            } else {
+                snake.hp -= 15;
+                outcome = theme === 'SCIFI' ? 'Safety protocols failed. Unit sustained structural damage while retreating.' : 'His path was blocked! He struck a stone during the frantic escape.';
+                this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['DEFEAT', outcome, successChance.toString()]);
+            }
         } else if (choice === 'HIDE') {
-            const roll = Math.random() * 20 + snake.currentStats.agility;
-            if (roll > 15) {
+            if (isSuccess) {
                 outcome = theme === 'SCIFI' ? 'Stealth protocols held. The threat passed over.' : 'Shadows became his armor; the danger did not see him.';
-                this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['STAY_HIDDEN', outcome]);
-                if (this.envParams.version === 'v10.0' && Math.random() < 0.3) {
+                this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['STAY_HIDDEN', outcome, successChance.toString()]);
+                if (this.envParams.version === 'v10.0' && this.rng.next() < 0.3) {
                     const skill = 'Shadow Blend';
                     if (!snake.skills.includes(skill)) snake.skills.push(skill);
                 }
             } else {
                 outcome = theme === 'SCIFI' ? 'Cloaking failed! Forced into an immediate engagement.' : 'The stones rolled under his weight, revealing his presence!';
                 snake.hp -= 20;
-                this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['REVEALED', outcome]);
+                this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['REVEALED', outcome, successChance.toString()]);
             }
         } else {
             // FIGHT
-            const roll = Math.random() * 20 + (snake.currentStats.venom + snake.currentStats.size);
-            if (roll > 20) {
+            if (isSuccess) {
                 snake.experience += 30;
                 snake.scavengeProfit += 100;
                 outcome = theme === 'SCIFI' ? 'Core Overload victory! Salvaged high-tier hardware.' : 'A roar echoed in the glade. The foe was vanquished, its gold claimed.';
-                this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['VICTORY', outcome]);
+                this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['VICTORY', outcome, successChance.toString()]);
 
                 if (this.envParams.version === 'v10.0') {
                     const skills = ['Venom Spit', 'Crushing Coil', 'Sharp Fangs'];
-                    const skill = skills[Math.floor(Math.random() * skills.length)];
+                    const skill = skills[Math.floor(this.rng.next() * skills.length)];
                     if (!snake.skills.includes(skill)) snake.skills.push(skill);
                 }
             } else {
                 snake.hp -= 30;
                 outcome = theme === 'SCIFI' ? 'Hardware damage sustained. Retreating with sub-optimal data.' : 'The battle was a calamity. He crawled away, broken and shamed.';
-                this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['DEFEAT', outcome]);
+                this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['DEFEAT', outcome, successChance.toString()]);
             }
         }
         if (outcome) snake.storyHistory.push(outcome);
@@ -459,7 +471,7 @@ export class Simulation {
             }
         }
 
-        return validOptions[Math.floor(Math.random() * validOptions.length)];
+        return validOptions[Math.floor(this.rng.next() * validOptions.length)];
     }
 
     handleFood(snake: SnakeState, cell: Cell) {
@@ -489,7 +501,23 @@ export class Simulation {
             this.emit(snake, 'BEHAVIOR_SHIFT', snake.pos, cell.terrain, ['SCARRED', 'Gained Hazard Resistance']);
         }
 
+        // v14.1 Pacing Gravity: Hazards are deadlier in Crisis/Climax
+        let pacingMod = 1.0;
+        if (this.pacingAct === 'CRISIS') pacingMod = 1.5;
+        if (this.pacingAct === 'CLIMAX') pacingMod = 2.0;
+        damage = Math.floor(damage * pacingMod);
+
         this.emit(snake, 'HAZARD_HIT', snake.pos, cell.terrain, [cell.hazard.kind], damage, undefined, cell.hazard.kind === '🌀' ? 'STORM' : 'HAZARD');
+
+        // v15.0 Branch Manager: Narrative Fake for "Missing Preparation"
+        const hasResist = BODIES[snake.draft.body].flags.includes('hazard_resist');
+        if (!hasResist && damage > 20) {
+            this.emit(snake, 'SYSTEM_RESONANCE', snake.pos, cell.terrain, [
+                'BRANCH_MANAGER_FAKE',
+                `${snake.name} endured the impossible through sheer kinetic defiance.`
+            ]);
+        }
+
         if (snake.hp <= 0) {
             snake.alive = false;
             this.emit(snake, 'KO', snake.pos, cell.terrain, ['hazard_death'], undefined, undefined, cell.hazard.kind === '🌀' ? 'STORM' : 'HAZARD');
@@ -569,7 +597,7 @@ export class Simulation {
 
     emit(snake: SnakeState, type: EventType, pos: { x: number, y: number }, terrain: TerrainType, tags: string[], amount?: number, targetId?: string, cause: CauseType = 'NONE'): GameEvent {
         const event: GameEvent = {
-            id: Math.random().toString(36).substr(2, 9),
+            id: this.rng.nextId(),
             tick: this.tick,
             snakeId: snake.id,
             type,
@@ -583,7 +611,11 @@ export class Simulation {
                 hp: snake.hp,
                 effectiveStats: { ...snake.currentStats },
                 aiState: snake.aiState,
-                flags: [...snake.flags]
+                flags: [...snake.flags],
+                pacing: {
+                    phase: this.pacingPhase,
+                    act: this.pacingAct
+                }
             }
         };
         this.events.push(event);
@@ -592,7 +624,7 @@ export class Simulation {
 
     emitGlobal(type: EventType, pos: { x: number, y: number }, terrain: TerrainType, tags: string[]) {
         this.events.push({
-            id: Math.random().toString(36).substr(2, 9),
+            id: this.rng.nextId(),
             tick: this.tick,
             snakeId: 'SYSTEM',
             type,
@@ -603,7 +635,11 @@ export class Simulation {
                 hp: 0,
                 effectiveStats: { speed: 0, size: 0, venom: 0, agility: 0, camouflage: 0 },
                 aiState: 'none',
-                flags: []
+                flags: [],
+                pacing: {
+                    phase: this.pacingPhase,
+                    act: this.pacingAct
+                }
             }
         });
     }
@@ -611,18 +647,20 @@ export class Simulation {
 
 import { generateWorld } from './world';
 
-export function generateSimulation(playerDrafts: SnakeDraft[], enemyDrafts: SnakeDraft[], envParams: EnvironmentParams, p2Team: SnakeDraft[] = []) {
+export function generateSimulation(playerDrafts: SnakeDraft[], enemyDrafts: SnakeDraft[], envParams: EnvironmentParams, p2Team: SnakeDraft[] = [], seed: number = Date.now()) {
     const world = generateWorld(envParams);
+    const rng = new DeterministicRandom(seed);
+
     const snakes: SnakeState[] = [
-        ...playerDrafts.map((d, i) => createSnake(`Blue-${i}`, 'player', d, i)),
-        ...p2Team.map((d, i) => createSnake(`Green-${i}`, 'player', d, i + playerDrafts.length)),
-        ...enemyDrafts.map((d, i) => createSnake(`Red-${i}`, 'enemy', d, i))
+        ...playerDrafts.map((d, i) => createSnake(`Blue-${i}`, 'player', d, i, rng)),
+        ...p2Team.map((d, i) => createSnake(`Green-${i}`, 'player', d, i + playerDrafts.length, rng)),
+        ...enemyDrafts.map((d, i) => createSnake(`Red-${i}`, 'enemy', d, i, rng))
     ];
 
-    return new Simulation(world, snakes, envParams);
+    return new Simulation(world, snakes, envParams, seed);
 }
 
-function createSnake(name: string, team: 'player' | 'enemy', draft: SnakeDraft, index: number): SnakeState {
+function createSnake(name: string, team: 'player' | 'enemy', draft: SnakeDraft, index: number, rng: DeterministicRandom): SnakeState {
     const bodyStats = BODIES[draft.body].stats;
     const affinityBonuses = AFFINITIES[draft.affinity].bonuses;
     const quirkBonuses = QUIRKS[draft.quirk].bonuses;
@@ -636,7 +674,7 @@ function createSnake(name: string, team: 'player' | 'enemy', draft: SnakeDraft, 
     };
 
     return {
-        id: `${team}-${index}-${Math.random().toString(36).substr(2, 5)}`,
+        id: `${team}-${index}-${rng.nextId(5)}`,
         name,
         team,
         hp: 100,

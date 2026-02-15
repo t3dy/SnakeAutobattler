@@ -17,6 +17,7 @@ import RadianceDisplay from './components/RadianceDisplay'; // v13.1 Recovery
 import { DESIGNERS } from './engine/designers';
 import { generateSimulation } from './engine/sim'
 import { generateNarrative } from './engine/narrate'
+import { DeterministicRandom } from './engine/random'
 
 enum GameStage {
     Draft = 'DRAFT',
@@ -24,6 +25,7 @@ enum GameStage {
     CinematicEncounter = 'CINEMATIC_ENCOUNTER',
     Recap = 'RECAP',
     Landing = 'LANDING',
+    Options = 'OPTIONS',
     ModeSelect = 'MODE_SELECT',
     GenreSelect = 'GENRE_SELECT',
     DraftOrderSelect = 'DRAFT_ORDER_SELECT',
@@ -36,12 +38,12 @@ enum GameStage {
     AncestorsCoil = 'ANCESTORS_COIL',
 }
 
-type GameState = 'landing' | 'mode_select' | 'genre_select' | 'draft_order_select' | 'env_draft' | 'draft' | 'battle' | 'recap' | 'pre_phase' | 'hall_of_designers' | 'radiant_toy' | 'resonance_tuner' | 'genre_flux' | 'ancestors_coil' | 'cinematic_video' | 'ledger' | 'chronicle_view';
+type GameState = 'landing' | 'mode_select' | 'genre_select' | 'draft_order_select' | 'env_draft' | 'draft' | 'battle' | 'recap' | 'pre_phase' | 'hall_of_designers' | 'radiant_toy' | 'resonance_tuner' | 'genre_flux' | 'ancestors_coil' | 'cinematic_video' | 'ledger' | 'chronicle_view' | 'version_archive';
 
 function App() {
     const [gameState, setGameState] = useState<GameState>('landing')
     const [gameStage, setGameStage] = useState<GameStage>(GameStage.Draft); // v13.0 Meta-Stage
-    const [engineVersion, setEngineVersion] = useState<EngineVersion>('v13.0');
+    const [engineVersion, setEngineVersion] = useState<EngineVersion>('v15.0');
     const [playerName, setPlayerName] = useState<string>('Anonymous'); // v13.0 Identity
     const [envParams, setEnvParams] = useState<EnvironmentParams>({
         climate: 'Standard',
@@ -69,14 +71,21 @@ function App() {
     const [cinematicView, setCinematicView] = useState<{ choice: any, snake: any } | null>(null)
     const [currentTick, setCurrentTick] = useState(0)
     const [isPlaying, setIsPlaying] = useState(false)
+    const [sessionSeed, setSessionSeed] = useState<number>(Date.now())
+    const [encounterAccount, setEncounterAccount] = useState<string | null>(null)
     const playIntervalRef = useRef<number | null>(null)
 
     const selectVersion = (v: EngineVersion) => {
         setEngineVersion(v)
-        // v13.1: Lucid Loop Recovery - Explicit Routing
-        if (v === 'v13.0' || v === 'v12.0' || v === 'v10.0' || v === 'v11.0') {
+        // v15.0 Brass Tacks: Direct to Draft with SOLO defaults
+        if (v === 'v15.0') {
+            setEnvParams(prev => ({ ...prev, mode: 'SOLO', genre: 'NOIR' }))
+            setGameState('draft')
+        } else if (v === 'v14.1' || v === 'v14.0' || v === 'v13.0' || v === 'v12.0' || v === 'v10.0' || v === 'v11.0') {
             setGameState('mode_select')
         } else if (v === 'v5.0' || v === 'v6.0' || v === 'v7.0' || v === 'v8.0') {
+            setGameState('mode_select')
+        } else if (v === 'v13.1' || v === 'v13.2') {
             setGameState('mode_select')
         } else if (v === 'v4.0') {
             setGameState('env_draft')
@@ -125,8 +134,9 @@ function App() {
     }
 
     const handleDraftComplete = (draft: SnakeDraft) => {
-        const isBattle = envParams.mode === 'HOTSEAT_BATTLE';
-        const isCoop = envParams.mode === 'HOTSEAT_COOP';
+        // v15.0 Brass Tacks: Single Player Only
+        const isBattle = envParams.mode === 'HOTSEAT_BATTLE' && engineVersion !== 'v15.0';
+        const isCoop = envParams.mode === 'HOTSEAT_COOP' && engineVersion !== 'v15.0';
 
         if (draftTurn === 'P1') {
             setPlayerTeam(prev => [...prev, draft]);
@@ -142,6 +152,13 @@ function App() {
         }
     }
 
+    const hardReset = () => {
+        if (window.confirm("WARNING: This will clear all session data and return to the primordial state. Proceed?")) {
+            localStorage.clear();
+            window.location.reload();
+        }
+    }
+
     useEffect(() => {
         const targetCount = 2;
         if (draftingSnakeIdx >= targetCount) {
@@ -154,14 +171,18 @@ function App() {
     }, [draftingSnakeIdx, engineVersion, draftOrder])
 
     const startFight = () => {
+        const seed = Date.now();
+        setSessionSeed(seed);
+        const rng = new DeterministicRandom(seed);
+
         const enemyDrafts: SnakeDraft[] = enemyTeam.length > 0 ? enemyTeam : [1, 2, 3].map(() => ({
-            body: Object.keys(BODIES)[Math.floor(Math.random() * 5)] as BodyType,
-            instinct: Object.keys(INSTINCTS)[Math.floor(Math.random() * 5)] as InstinctType,
-            affinity: Object.keys(AFFINITIES)[Math.floor(Math.random() * 5)] as AffinityType,
-            quirk: Object.keys(QUIRKS)[Math.floor(Math.random() * 5)] as QuirkType
+            body: Object.keys(BODIES)[Math.floor(rng.next() * 5)] as BodyType,
+            instinct: Object.keys(INSTINCTS)[Math.floor(rng.next() * 5)] as InstinctType,
+            affinity: Object.keys(AFFINITIES)[Math.floor(rng.next() * 5)] as AffinityType,
+            quirk: Object.keys(QUIRKS)[Math.floor(rng.next() * 5)] as QuirkType
         }))
 
-        const sim = generateSimulation(playerTeam, enemyDrafts, envParams, p2Team)
+        const sim = generateSimulation(playerTeam, enemyDrafts, envParams, p2Team, seed)
         setActiveSim(sim)
         setCurrentTick(0)
         setIsPlaying(true)
@@ -171,10 +192,20 @@ function App() {
         if (!activeSim || !currentEncounter) return
         const snake = activeSim.snakes.find((s: any) => s.id === currentEncounter.snakeId);
 
-        // v13.0 ALWAYS transitions to CinematicVideo before resolution
-        setCinematicView({ choice, snake });
-        setGameState('cinematic_video');
-        setGameStage(GameStage.CinematicEncounter);
+        if (engineVersion === 'v15.0') {
+            // v15.0 Brass Tacks: Generate Text Account
+            const resolution = activeSim.handleChoice(currentEncounter.snakeId, choice);
+            const narrative = generateNarrative([resolution], activeSim.snakes, envParams);
+
+            setEncounterAccount(narrative.snakeStories[0]?.story.fullStory || "The encounter resolved in silence.");
+            setCurrentEncounter(null);
+            setIsPlaying(false); // Pause so player can read the account
+        } else {
+            // v13.0 ALWAYS transitions to CinematicVideo before resolution
+            setCinematicView({ choice, snake });
+            setGameState('cinematic_video');
+            setGameStage(GameStage.CinematicEncounter);
+        }
     }
 
     const onCinematicComplete = () => {
@@ -191,15 +222,16 @@ function App() {
     }
 
     const startPhase2 = () => {
+        const rng = new DeterministicRandom(sessionSeed + 1); // Iterative seed for next phase
         const nextParams: EnvironmentParams = {
             ...envParams,
-            climate: ['Standard', 'Arid', 'Lush', 'Binary'][Math.floor(Math.random() * 4)] as any,
-            fauna: ['Standard', 'Hostile', 'Sparse', 'Swarm'][Math.floor(Math.random() * 4)] as any,
-            flora: ['Standard', 'Dense', 'None', 'Obsidian'][Math.floor(Math.random() * 4)] as any,
+            climate: ['Standard', 'Arid', 'Lush', 'Binary'][Math.floor(rng.next() * 4)] as any,
+            fauna: ['Standard', 'Hostile', 'Sparse', 'Swarm'][Math.floor(rng.next() * 4)] as any,
+            flora: ['Standard', 'Dense', 'None', 'Obsidian'][Math.floor(rng.next() * 4)] as any,
             phase: 2
         };
         setEnvParams(nextParams);
-        const sim = generateSimulation(activeSim.snakes.map((s: SnakeState) => s.draft), [], nextParams);
+        const sim = generateSimulation(activeSim.snakes.map((s: SnakeState) => s.draft), [], nextParams, [], sessionSeed + 1);
         // Persist skills/stats
         sim.snakes.forEach((s: any, i: number) => {
             s.skills = activeSim.snakes[i].skills;
@@ -252,15 +284,19 @@ function App() {
     }, [currentTick, activeSim, engineVersion, envParams.phase])
 
     useEffect(() => {
-        if (isPlaying) {
+        if (isPlaying && activeSim) {
             playIntervalRef.current = window.setInterval(() => {
-                setCurrentTick(prev => prev >= 60 ? (setIsPlaying(false), 60) : prev + 1)
+                activeSim.step(); // v15.0 Stabilization: Step the engine
+                setCurrentTick(activeSim.tick);
+                if (activeSim.tick >= 60) {
+                    setIsPlaying(false);
+                }
             }, 300)
         } else if (playIntervalRef.current) {
             clearInterval(playIntervalRef.current)
         }
         return () => { if (playIntervalRef.current) clearInterval(playIntervalRef.current) }
-    }, [isPlaying])
+    }, [isPlaying, activeSim])
 
     const versions = [
         { id: 'v1.0', title: 'The Primordial Coil', desc: 'Basic movement and apple consumption.' },
@@ -272,7 +308,10 @@ function App() {
         { id: 'v12.0', title: 'The Genre Shift', desc: 'Narrative genres and creative direction.' },
         { id: 'v13.0', title: 'The Radiant Architect', desc: 'Encounter-driven drama and tool-assisted design.' },
         { id: 'v13.1', title: 'The Lucid Loop', desc: 'Refined navigation and visual feedback.' },
-        { id: 'v13.2', title: 'The Narrative Weave', desc: 'Context-aware storytelling and orphanage detection.' }
+        { id: 'v13.2', title: 'The Narrative Weave', desc: 'Context-aware storytelling and orphanage detection.' },
+        { id: 'v14.0', title: 'The Narrative Skald', desc: 'Strict data-driven schema and layered composition.' },
+        { id: 'v14.1', title: 'The Narrative Skald (Governance)', desc: 'JSON-driven registry and dynamic pacing scaling.' },
+        { id: 'v15.0', title: 'The Stall Guard', desc: 'Seeded determinism and Branch Manager recovery logic.' }
     ];
 
     const VersionCard = ({ id, title }: { id: string, title: string }) => (
@@ -309,24 +348,97 @@ function App() {
 
             <main>
                 {gameState === 'landing' && (
-                    <>
-                        <div className="player-identity-bar">
-                            <label>OPERATOR ID: </label>
-                            <input
-                                type="text"
-                                value={playerName}
-                                onChange={(e) => setPlayerName(e.target.value)}
-                                placeholder="ENTER NAME..."
-                                className="cyber-input"
+                    <div className="hero-landing">
+                        <div className="hub-header">
+                            <h2>CENTRAL COMMAND</h2>
+                            <p>SELECT SECTOR FOR DEPLOYMENT</p>
+                        </div>
+
+                        <div className="hub-actions">
+                            <button className="hub-btn hub-btn-newest" onClick={() => selectVersion('v15.0')}>
+                                <span className="hub-label">TRY NEWEST VERSION</span>
+                                <span className="hub-footer">v15.0 "Stall Guard" (2026)</span>
+                            </button>
+
+                            <button className="hub-btn hub-btn-classic" onClick={() => selectVersion('v1.0')}>
+                                <span className="hub-label">TRY ORIGINAL VERSION</span>
+                                <span className="hub-footer">v1.0 "Primordial Coil"</span>
+                            </button>
+
+                            <button className="hub-btn hub-btn-options" onClick={() => setGameState('options' as any)}>
+                                <span className="hub-label">OTHER OPTIONS</span>
+                                <span className="hub-footer">Legacy, Tools & Diagnostics</span>
+                            </button>
+                        </div>
+
+                        <div className="safe-mode-zone">
+                            <button className="reset-btn-link" onClick={hardReset}>SYSTEM HARD RESET</button>
+                        </div>
+                    </div>
+                )}
+
+                {gameState === 'options' as any && (
+                    <div className="options-master-screen">
+                        <div className="options-header">
+                            <button className="back-btn" onClick={() => setGameState('landing')}>← BACK</button>
+                            <h2>SYSTEM ARCHIVE & TOOLS</h2>
+                        </div>
+
+                        <div className="options-grid">
+                            <div className="options-section">
+                                <h3>LEGACY EXPEDITIONS</h3>
+                                <div className="legacy-list">
+                                    {versions.filter(v => v.id !== 'v1.0' && v.id !== 'v15.0').map(v => (
+                                        <button key={v.id} className="legacy-btn" onClick={() => selectVersion(v.id as any)}>
+                                            <strong>{v.id}</strong> {v.title}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="options-section">
+                                <h3>INTERNAL SCHEMATICS</h3>
+                                <div className="tools-list">
+                                    <button onClick={() => setGameState('hall_of_designers')}>HALL OF DESIGNERS</button>
+                                    <button onClick={() => setGameState('radiant_toy')}>RADIANT TOY</button>
+                                    <button onClick={() => setGameState('resonance_tuner')}>RESONANCE TUNER</button>
+                                    <button onClick={() => setGameState('genre_flux')}>GENRE FLUX</button>
+                                    <button onClick={() => setGameState('ancestors_coil' as any)}>ANCESTORS COIL</button>
+                                    <button onClick={() => setGameState('ledger')}>FEEDBACK LEDGER</button>
+                                    <button onClick={() => setGameState('chronicle_view')}>CHRONICLE ARCHIVE</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {gameState === 'version_archive' && (
+                    <div className="archive-screen">
+                        <div className="archive-header">
+                            <button className="back-btn" onClick={() => setGameState('landing')}>← BACK</button>
+                            <h2>THE SCHEMATIC ARCHIVE</h2>
+                        </div>
+
+                        <div className="tool-grid">
+                            <button className="tool-btn" onClick={() => setGameState('hall_of_designers')}>DESIGN TEAM</button>
+                            <button className="tool-btn" onClick={() => setGameState('radiant_toy')}>RADIANT TOY</button>
+                            <button className="tool-btn" onClick={() => setGameState('resonance_tuner')}>RESONANCE TUNER</button>
+                            <button className="tool-btn" onClick={() => setGameState('genre_flux')}>GENRE FLUX</button>
+                            <button className="tool-btn" onClick={() => setGameState('ancestors_coil' as any)}>ANCESTORS COIL</button>
+                            <button className="tool-btn" onClick={() => setGameState('ledger')}>FEEDBACK LEDGER</button>
+                            <button className="tool-btn" onClick={() => setGameState('chronicle_view')}>CHRONICLE ARCHIVE</button>
+                        </div>
+
+                        <div className="archive-version-section">
+                            <h3>LEGACY VERSIONS</h3>
+                            <SnakeSkinLayout
+                                versions={versions}
+                                onSelectVersion={(id) => selectVersion(id as EngineVersion)}
+                                onSelectToy={(toyId) => setGameState(toyId as any)}
+                                currentVersion={engineVersion}
                             />
                         </div>
-                        <SnakeSkinLayout
-                            versions={versions}
-                            onSelectVersion={(id) => setEngineVersion(id as EngineVersion)}
-                            onSelectToy={(toyId) => setGameState(toyId as any)}
-                            currentVersion={engineVersion}
-                        />
-                    </>
+                    </div>
                 )}
 
                 {gameState === 'mode_select' && (
@@ -418,13 +530,24 @@ function App() {
                                 <Arena world={activeSim.world} events={activeSim.events} currentTick={currentTick} snakes={activeSim.snakes} params={{ ...envParams, version: engineVersion }} />
                                 {currentEncounter && (
                                     <div className="choice-modal">
-                                        <h3>ENCOUNTER DETECTED</h3>
-                                        <p>A junction in the {currentEncounter.terrain}!</p>
+                                        <h3>ENCOUNTER: {currentEncounter.terrain.toUpperCase()}</h3>
                                         <div className="choice-options">
                                             <button onClick={() => makeChoice('RUN')}>🏃 RUN</button>
                                             <button onClick={() => makeChoice('HIDE')}>🕵️ HIDE</button>
                                             <button onClick={() => makeChoice('FIGHT')}>⚔️ FIGHT</button>
                                         </div>
+                                    </div>
+                                )}
+                                {encounterAccount && (
+                                    <div className="choice-modal account-modal">
+                                        <h3>ENCOUNTER ACCOUNT</h3>
+                                        <div className="account-text">
+                                            {encounterAccount}
+                                        </div>
+                                        <button className="unleash-btn" onClick={() => {
+                                            setEncounterAccount(null);
+                                            setIsPlaying(true);
+                                        }}>CONTINUE EXPEDITION</button>
                                     </div>
                                 )}
                             </div>

@@ -22,50 +22,89 @@ A narrative beat will be constructed by stacking five distinct layers in a stric
 | **IV. GENRE** | Stylistic Wrapper | "Internal Monologue: 'Just another Tuesday.'" |
 | **V. META** | Radiance Glitch | "T-The a-air w-was th-thick..." |
 
-## 2. Structural Data Schema
+## 2. Structural Data Schema (v2.0 - Strict)
 
-We will replace string arrays with a **Typed Template Registry**.
+We will use explicit types to enforce the 5-layer model.
 
 ```typescript
-type NarrativeCategory = "IDENTITY" | "ENCOUNTER" | "ENVIRONMENT" | "META";
+export type NarrativeLayer = "BIO" | "ID" | "ACT" | "GENRE" | "META";
 
-interface NarrativeTemplate {
-    id: string; // UNIQUE_ID
+export type NarrativeCategory = 
+    | "ENVIRONMENT"   // BIO: Atmosphere
+    | "IDENTITY"      // ID: Voice
+    | "CHOREOGRAPHY"  // ACT: Action Structure
+    | "GENRE_WRAPPER" // GENRE: Frame
+    | "META_TONE";    // META: Glitch/Shift
+
+export type EncounterType = "AMBUSH" | "CLASH" | "EVADE" | "RETREAT_SMART" | "RETREAT_PANIC" | "LETHAL" | "FAILURE_NO_DEATH" | "SKILL_ACQUIRED" | "PHASE_ECHO";
+
+export type TriggerRule = {
+    // Logic Ops
+    any?: TriggerRule[];
+    all?: TriggerRule[];
+    not?: TriggerRule;
+    
+    // Context Matchers
+    trait?: string;
+    terrain?: string;
+    phase?: "KNOWN" | "UNKNOWN";
+    action?: "RUN" | "HIDE" | "FIGHT" | "DIG" | "HACK";
+    encounterType?: EncounterType;
+    genre?: string;
+    radianceBand?: "LOW" | "MID" | "HIGH";
+    
+    // Pacing Matchers
+    actLabel?: "OPENING" | "RISING" | "CRISIS" | "CLIMAX" | "AFTERMATH";
+    minTick?: number;
+    maxTick?: number;
+};
+
+export interface NarrativeTemplate {
+    id: string;
+    layer: NarrativeLayer;
     category: NarrativeCategory;
     trigger: TriggerRule;
-    weight: number; // For RNG variance
-    priority: number; // For overwrite logic
+    
+    priority: number; // Deterministic tie-break
+    weight: number;   // RNG variance within priority
+    
+    cooldown?: number; // Beats before reuse
+    oncePer?: "BEAT" | "ACT" | "PHASE" | "EXPEDITION";
+    
     template: string;
-}
-
-interface TriggerRule {
-    trait?: string;      // "BOULDERBACK"
-    terrain?: string;    // "forest"
-    action?: string;     // "RUN"
-    genre?: string;      // "NOIR"
-    radianceBand?: 'LOW' | 'MID' | 'HIGH';
 }
 ```
 
 ## 3. The Composition Pipeline (NarrativeComposer)
 
-The `NarrativeComposer` class will execute the following pipeline for every beat:
+### The BeatContext Contract
+The composer expects a fully computed fact sheet:
+```typescript
+interface BeatContext {
+    seed: number;
+    tick: number;
+    phase: "KNOWN" | "UNKNOWN";
+    snake: SnakeState;
+    environment: { terrain: string; fields: any };
+    encounter: { type: EncounterType; intensity: number };
+    radiance: { value: number; band: "LOW" | "MID" | "HIGH" };
+    history: {
+        usedTemplateIds: string[];
+        perTemplateCooldowns: Record<string, number>;
+    };
+}
+```
 
-### Phase 1: Selection (Arbitration)
-1.  **Query Templates**: Fetch all matching templates for the context.
-2.  **Resolve Conflicts**:
-    *   *Identity*: If Snake has `Boulderback` AND `Instinct`, select HIGHEST PRIORITY. (Do not stack voices).
-    *   *Environment*: Apply `repetitionPenalty`. Do not describe the forest every turn.
-    *   *Choreography*: Must match `EncounterType` exactly.
+### Arbitration Rules (Grammar)
+1.  **BIO**: Optional. Throttled (e.g., max 1 per 5 beats).
+2.  **ID**: EXACTLY ONE per beat. Priority: Trait > Instinct > Body > Neutral.
+3.  **ACT**: MANDATORY. Must match `EncounterType`.
+4.  **GENRE**: Optional wrapper.
+5.  **META**: Transform pass only.
 
-### Phase 2: Assembly
-Combination logic:
-`Beat = [Environment?] + [Voice(Verb)] + [Choreography(Object)] + [Genre(Wrapper)]`
-
-### Phase 3: Transformation (The Radiance Pass)
-Apply regex-based transforms based on Radiance:
-*   **Low Radiance**: `s/creates/cr__tes/g`, insert `[ERR]` prefixes.
-*   **High Radiance**: Use "Golden" adjectives (`Destined`, `Perfected`).
+### Output Structure
+The final beat is assembled as:
+`[BIO] [ID + ACT] [GENRE] [META]`
 
 ## 4. Implementation Plan
 

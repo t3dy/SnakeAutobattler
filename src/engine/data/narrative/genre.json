@@ -1,0 +1,13 @@
+[
+    {
+        "id": "GENRE_NOIR_WRAPPER",
+        "layer": "GENRE",
+        "category": "GENRE_WRAPPER",
+        "trigger": {
+            "genre": "NOIR"
+        },
+        "priority": 10,
+        "weight": 1,
+        "template": "Internal Monologue: '{core} Just another rainy night in hell.'"
+    }
+]

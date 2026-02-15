@@ -1,0 +1,23 @@
+[
+    {
+        "id": "META_HIGH_RAD",
+        "layer": "META",
+        "category": "META_TONE",
+        "trigger": {
+            "radianceBand": "HIGH"
+        },
+        "priority": 10,
+        "weight": 1,
+        "template": "[HARMONY ACHIEVED]"
+    },
+    {
+        "id": "meta_climax_generic",
+        "layer": "META",
+        "category": "META_COMMENTARY",
+        "trigger": {
+            "actLabel": "CLIMAX"
+        },
+        "template": "The final moments approach. Every decision now echoes in eternity.",
+        "priority": 10
+    }
+]

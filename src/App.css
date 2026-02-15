@@ -171,6 +171,158 @@ h1 {
     margin-left: 10px;
 }
 
+/* Grand Hub (v15.0) */
+.hero-landing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+    gap: 40px;
+}
+
+.hub-header {
+    text-align: center;
+}
+
+.hub-header h2 {
+    font-size: 2.5rem;
+    color: #00ff7f;
+    letter-spacing: 5px;
+    margin-bottom: 5px;
+}
+
+.hub-header p {
+    font-size: 0.9rem;
+    color: rgba(0, 255, 127, 0.6);
+    letter-spacing: 2px;
+}
+
+.hub-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+    max-width: 500px;
+}
+
+.hub-btn {
+    padding: 25px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    font-family: inherit;
+    position: relative;
+    overflow: hidden;
+}
+
+.hub-btn-newest {
+    background: #00ff7f;
+    color: #000;
+    box-shadow: 0 0 30px rgba(0, 255, 127, 0.3);
+}
+
+.hub-btn-classic {
+    background: transparent;
+    border: 2px solid #00ff7f;
+    color: #00ff7f;
+}
+
+.hub-btn-options {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.hub-btn:hover {
+    transform: scale(1.02);
+    filter: brightness(1.2);
+}
+
+.hub-label {
+    font-size: 1.4rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+}
+
+.hub-footer {
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+.reset-btn-link {
+    background: transparent;
+    border: none;
+    color: rgba(255, 0, 0, 0.5);
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 0.8rem;
+    margin-top: 20px;
+}
+
+/* Options Master Screen */
+.options-master-screen {
+    padding: 40px;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.options-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+}
+
+.options-section h3 {
+    color: #00ff7f;
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    letter-spacing: 2px;
+    text-align: left;
+}
+
+.legacy-list,
+.tools-list {
+    display: grid;
+    gap: 10px;
+}
+
+.legacy-btn,
+.tools-list button {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: 0.2s;
+    font-family: inherit;
+}
+
+.legacy-btn:hover,
+.tools-list button:hover {
+    background: rgba(0, 255, 127, 0.1);
+    border-color: #00ff7f;
+}
+
+.legacy-btn strong {
+    color: #00ff7f;
+    margin-right: 10px;
+}
+
 /* Landing Screen */
 .version-grid {
     display: flex;
@@ -1150,40 +1302,103 @@ button:hover {
     font-size: 0.8rem;
 }
 
-.designer-entry-btn {
-    border-color: #00ff7f;
-    color: #00ff7f;
+.designer-card.clickable {
+    cursor: pointer;
 }
 
-.lab-designer-insight {
-    border-top: 1px solid #33ff33;
-    padding-top: 15px;
+.designer-action-hint {
     margin-top: 10px;
+    font-size: 0.7rem;
+    color: #00ff7f;
+    opacity: 0.6;
+    letter-spacing: 1px;
 }
 
-.insight-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+.designer-card:hover .designer-action-hint {
+    opacity: 1;
+}
+
+/* Designer Diagnostic Dashboard */
+.designer-diagnostic {
+    background: #0a0a0a;
+    border: 2px solid #00ff7f;
+    padding: 30px;
+    min-height: 60vh;
+}
+
+.diagnostic-header {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 40px;
+    border-bottom: 1px solid rgba(0, 255, 127, 0.3);
+    padding-bottom: 20px;
+}
+
+.diagnostic-title {
+    display: flex;
+    align-items: center;
     gap: 15px;
 }
 
-.insight-card {
-    background: #050505;
-    border: 1px solid #00ff7f;
-    padding: 10px;
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    font-size: 0.75rem;
+.diagnostic-title h3 {
+    font-size: 1.8rem;
+    color: #fff;
+    margin: 0;
+    letter-spacing: 3px;
 }
 
-.insight-emoji {
-    font-size: 1.5rem;
+.diagnostic-content {
+    display: grid;
+    gap: 30px;
 }
 
-.insight-content p {
-    margin: 5px 0 0;
-    font-style: italic;
+.diagnostic-section h4 {
+    font-size: 0.8rem;
+    color: #00ff7f;
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+}
+
+.weakness-text {
+    font-size: 1.2rem;
+    color: #ff4444;
+    background: rgba(255, 68, 68, 0.1);
+    padding: 15px;
+    border-left: 4px solid #ff4444;
+}
+
+.suggestion-text {
+    font-size: 1.1rem;
+    color: #33ff33;
+    background: rgba(51, 255, 51, 0.05);
+    padding: 15px;
+}
+
+.diagnostic-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.stat-box {
+    background: #111;
+    padding: 15px;
+    border: 1px solid #333;
+    text-align: center;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.7rem;
+    color: #888;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    font-size: 1.2rem;
+    font-weight: bold;
     color: #00ff7f;
 }
 
@@ -1558,4 +1773,41 @@ button:hover {
     background: rgba(255, 0, 0, 0.1);
     color: #ff4444;
     font-style: italic;
+}
+
+/* Encounter Account Modal (v15.0 Brass Tacks) */
+.account-modal {
+    max-width: 700px;
+    background: rgba(10, 10, 10, 0.95);
+    border: 3px solid #00ff7f;
+    box-shadow: 0 0 50px rgba(0, 255, 127, 0.2);
+    padding: 2.5rem;
+    z-index: 5000;
+}
+
+.account-modal h3 {
+    color: #00ff7f;
+    letter-spacing: 4px;
+    margin-bottom: 2rem;
+    font-size: 1.2rem;
+    border-bottom: 1px solid rgba(0, 255, 127, 0.3);
+    padding-bottom: 1rem;
+}
+
+.account-text {
+    font-size: 1.4rem;
+    line-height: 1.6;
+    color: #fff;
+    text-align: left;
+    margin-bottom: 2.5rem;
+    font-style: italic;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.account-modal .unleash-btn {
+    width: 100%;
+    background: #00ff7f;
+    color: #000;
+    font-weight: 800;
+    letter-spacing: 2px;
 }

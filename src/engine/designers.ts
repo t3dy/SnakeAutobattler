@@ -189,5 +189,15 @@ export const DESIGNERS: Designer[] = [
         description: 'Connects the various modules through the fluid currents of the engine.',
         technology: 'WebSockets & Async Data Streams',
         quote: 'Communication is the medium, the message is the coil.'
+    },
+    {
+        id: 'emerald-tree-boa',
+        name: 'Emerald Tree Boa',
+        role: 'Branch Manager',
+        emoji: '🌳',
+        purview: 'Loop Failure & Narrative Fakes',
+        description: 'Monitors the game loop for stalls. Provides narrative bridges and "fakes" to ensure progress when mechanics lag.',
+        technology: 'Fallback Recovery & State Patching',
+        quote: 'If the floor breaks, we\'ll slither through the canopy.'
     }
 ];
