@@ -1,31 +1,41 @@
-# Version History: Snake Autobattler
+# Snake Autobattler: The Version Chronicles
 
-## v1.0 - The Narrative Foundation (Initial Release)
-**Objective**: Establish a core simulation loop that generates a text-based account of a snake team's battle.
+From a simple terminal-style log to a multi-layered narrative engine, the Snake Autobattler has undergone a rapid evolution. This document tracks the mechanical and narrative logic behind every leap.
 
-### Challenges & Solutions
-- **Challenge**: Initial `npm install` failures due to file system locking/permissions on the host.
-  - **Solution**: Manually scaffolded the project and verified dependencies one-by-one, followed by a clean `npm install --prefer-offline`.
-- **Challenge**: GitHub Pages 404 on deployment.
-  - **Solution**: Discovered the repository-level setting "Source: GitHub Actions" was not enabled by default. Toggled the setting and corrected the Vite `base` path in `vite.config.ts` to `/SnakeAutobattler/`.
-- **Challenge**: 'Permission Denied' errors in GitHub Actions CI during the build step.
-  - **Solution**: Explicitly added `chmod +x node_modules/.bin/vite` to the deployment workflow to ensure the binary was executable on the Ubuntu runner.
+## [v1.0] - The Primal Log
+*   **Goal**: Establish the core simulation loop (Move -> Eat -> Fight).
+*   **Logic**: Pure functional simulation. Narrative was a secondary byproduct, formatted as simple terminal logs.
+*   **Legacy**: The 16x12 grid and basic snake stats (HP, Venom, Size) were born here.
 
-## v2.0 - Personality & Origin (The Character Update)
-**Objective**: Deepen the connection between player draft choices and the resulting story.
+## [v2.0] - The Identity Spark
+*   **Goal**: Give the "units" personality.
+*   **Logic**: Introduced the **Drafting System** (Body, Instinct, Affinity, Quirk).
+*   **Narrative Update**: Added `generateOriginBio`, moving from generic "Snake 1" to "The Reckless Aquatic Stalker".
 
-### Key Features
-- **Origin Bios**: Every snake story now begins with a "Bio" block that summarizes its body type, instinct, and affinity.
-- **Personality Commentary**: Injected flavor text into the narrative engine. Events like "Combat" or "Hazard Hits" now look at the snake's `Quirk` or `Body` to determine the prose.
-- **Legacy Logic**: Retained the core 60-tick event-driven simulation for consistency.
+## [v3.0] - The Gift of Sight (Vite/React)
+*   **Goal**: Move from abstraction to visualization.
+*   **Logic**: Ported the engine to React/Vite. Built the `Arena.tsx` component.
+*   **Experiment**: Real-time emoji replay allowed players to see *why* their snake died in a hazard.
+
+## [v4.0] - The Saga Engine
+*   **Goal**: Turn "events" into "stories".
+*   **Logic**: Developed the `StoryCompiler`. Instead of 1-1 event logging, it grouped events into **Dramatic Arcs** (Exploration, Conflict, Survival).
+*   **Improvement**: Snakes gained "Memory" of landmarks.
+
+## [v5.0] - Chronicles of Honor & Steel
+*   **Goal**: Thematic depth and multiplayer agency.
+*   **Logic**: Introduced **Environment Hub**, **Themes** (Medieval/Sci-Fi), and **Phases** (Scavenge/Clash).
+*   **Narrative Update**: Added Lush Prose and "Visual Prompt" synthesis for Recap portraits.
+
+## [v6.0] - The Merchant of Secrets
+*   **Goal**: Interactive Agency (FTL-style).
+*   **Logic**: Refactored the engine to **Pause** for player input.
+*   **New Mechanics**: Run, Hide, Fight choices. Persistent history stacking (every choice is recorded).
+*   **Experiment**: Moving away from "watching a movie" to "leading an expedition".
 
 ---
 
-## v3.0 - Animated Replay (The Visual Update)
-**Objective**: Represent the simulation world graphically using a dynamic emoji-based grid.
-
-### Key Features
-- **Watch Replay**: A new playback system that moves through the 60-tick simulation at a controllable pace.
-- **Emoji Arena**: A 16x12 grid that visualizes biomes (🌳🌵💧⛰️), snacks (🍎🐁), and hazards (⚠️).
-- **Snake Tracking**: Custom emojis for player (🐍) and enemy (👾) snakes, following their exact path from the event log.
-- **Micro-Animations**: Event-specific overlays like combat sparks (💥) and healing sparkles (✨) that appear in real-time on the grid.
+## Technical Philosophy: The "Chronicle" Model
+Our simulation is built on the principle that **simulation data should dictate narrative weight**. We don't just write a story; we compile a story from the debris of the math. 
+*   **Math-to-Myth**: Every HP lost to a hazard is converted into a line of struggle.
+*   **Trait-Driven Prose**: A "Reckless" snake in v6.0 doesn't just have stat penalties; the narration describes its "foolish charge".
