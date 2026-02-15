@@ -1,32 +1,24 @@
 # Snake Autobattler: Feature Guide
 
-This guide explains the mechanics and features across all 6 versions of the Snake Autobattler expedition engine.
+This guide explains the mechanics and features across all 8 versions of the Snake Autobattler expedition engine.
 
 ## Core Mechanics (Global)
-*   **Drafting System**: Every snake is built from 4 components:
-    *   **Body**: Base HP and Size.
-    *   **Instinct**: Combat bias (Aggressive vs Defensive).
-    *   **Affinity**: Elemental/Terrain bonuses (Aquatic, Desert, etc.).
-    *   **Quirk**: Random personality modifiers (Reckless, Cunning).
-*   **The Storm**: The arena shrinks over time (Tick 20+), dealing massive hazard damage to those on the edges.
+*   **The Drafting System**: 4 components determining base stats and identity.
+*   **The Storm**: Arena shrinkage force (Tick 20+).
 
 ## Version-Specific Features
 
-### v2.0 Identity Features
-*   **GenerateOriginBio**: Uses logic to write a unique back-story for your snake based on its starting traits.
+### v6.0 Manual Intervention
+*   **Manual Choices**: RUN, HIDE, or FIGHT during encounter scenes.
 
-### v3.0 & v4.0 Narrative Features
-*   **Visual Replay**: A grid-based rendering of the simulation using emojis.
-*   **Story Compiler**: Groups tick-by-tick events into "Dramatic Arcs" (e.g., *The Thirst for Growth*, *The Final Stand*).
-*   **Memory System**: Snakes remember where they found food or hit hazards, influencing their future pathfinding.
+### v7.0 Autonomous Depth
+*   **Autonomous Resolve**: The snake's "Will" (Traits + HP) decides the v6.0 choices automatically.
+*   **Causal Cascades**: Detects event clusters (e.g., Hazard -> Low HP -> Storm Hit) for connected narration.
+*   **Typed Adversity**: Distinguishes between damage from Storm, Hazards, Terrain, and Combat.
+*   **Brood Bonds**: Stat bonuses (Agility) for snakes moving as a pack.
 
-### v5.0 Theme & Multiplayer
-*   **Thematic Overlays**:
-    *   **⚔️ Medieval**: Honor points, gear salvage, and chivalric prose.
-    *   **🔫 Sci-Fi**: Power grids, terminal hacking, and tactical hardware data.
-*   **Hot-Seat Battle**: Two players draft squads and compete for dominance in the same arena.
-
-### v6.0 Incident Response
-*   **Scene-First Simulation**: The simulation pauses when a "Narrative Node" is hit.
-*   **Manual Intervention**: Players must manually choose **RUN**, **HIDE**, or **FIGHT**.
-*   **Persistent Stacking**: Every manual choice is logged into the `storyHistory`, creating a cohesive chronicle of agency.
+### v8.0 Cinematic Chronicle
+*   **SVG Snake Morphing**: Fluid, slithering path rendering replacing blocky emojis.
+*   **Cinematic Viewport**: Auto-zooms and centers on the active snake during dramatic encounters.
+*   **Atmospheric Grading**: CSS-based weather effects (Rain, Glitch) and mood coloring tied to environment parameters.
+*   **Parallax Scenery**: Layered backgrounds moving in the "Scene-First" encounter overlays.

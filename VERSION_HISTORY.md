@@ -4,38 +4,39 @@ From a simple terminal-style log to a multi-layered narrative engine, the Snake 
 
 ## [v1.0] - The Primal Log
 *   **Goal**: Establish the core simulation loop (Move -> Eat -> Fight).
-*   **Logic**: Pure functional simulation. Narrative was a secondary byproduct, formatted as simple terminal logs.
-*   **Legacy**: The 16x12 grid and basic snake stats (HP, Venom, Size) were born here.
+*   **Legacy**: Basic grid and snake stats (HP, Venom, Size) were born here.
 
 ## [v2.0] - The Identity Spark
 *   **Goal**: Give the "units" personality.
 *   **Logic**: Introduced the **Drafting System** (Body, Instinct, Affinity, Quirk).
-*   **Narrative Update**: Added `generateOriginBio`, moving from generic "Snake 1" to "The Reckless Aquatic Stalker".
+*   **Narrative**: Introduced `generateOriginBio`.
 
 ## [v3.0] - The Gift of Sight (Vite/React)
-*   **Goal**: Move from abstraction to visualization.
-*   **Logic**: Ported the engine to React/Vite. Built the `Arena.tsx` component.
-*   **Experiment**: Real-time emoji replay allowed players to see *why* their snake died in a hazard.
+*   **Goal**: Visualization via `Arena.tsx`.
 
 ## [v4.0] - The Saga Engine
 *   **Goal**: Turn "events" into "stories".
-*   **Logic**: Developed the `StoryCompiler`. Instead of 1-1 event logging, it grouped events into **Dramatic Arcs** (Exploration, Conflict, Survival).
-*   **Improvement**: Snakes gained "Memory" of landmarks.
+*   **Logic**: Developed the `StoryCompiler` grouping events into **Dramatic Arcs**.
 
 ## [v5.0] - Chronicles of Honor & Steel
-*   **Goal**: Thematic depth and multiplayer agency.
-*   **Logic**: Introduced **Environment Hub**, **Themes** (Medieval/Sci-Fi), and **Phases** (Scavenge/Clash).
-*   **Narrative Update**: Added Lush Prose and "Visual Prompt" synthesis for Recap portraits.
+*   **Goal**: Thematic depth (Medieval/Sci-Fi) and Hot-Seat Multiplayer.
 
 ## [v6.0] - The Merchant of Secrets
-*   **Goal**: Interactive Agency (FTL-style).
-*   **Logic**: Refactored the engine to **Pause** for player input.
-*   **New Mechanics**: Run, Hide, Fight choices. Persistent history stacking (every choice is recorded).
-*   **Experiment**: Moving away from "watching a movie" to "leading an expedition".
+*   **Goal**: Manual FTL-style agency (Run, Hide, Fight choices).
+
+## [v7.0] - The Ghost in the Scales
+*   **Goal**: Surgical causality and autonomous resolve.
+*   **Logic**: Decisions are automated based on the snake's **Personality Matrix** (HP + Traits + Trauma).
+*   **Narrative**: Added **Causal Cascades** and **Typed Adversity** (Storm vs Combat vs Terrain).
+
+## [v8.0] - The Living Chronicle
+*   **Goal**: Cinematic Visual Synthesis.
+*   **Logic**: Replaced static emojis with **SVG Snake Morphing** and **Cinematic Camera** (Auto-zoom on encounters).
+*   **Atmosphere**: Procedural **Weather Layers** (Rain, Sandstorm, Glitch) driven by climate parameters.
 
 ---
 
 ## Technical Philosophy: The "Chronicle" Model
 Our simulation is built on the principle that **simulation data should dictate narrative weight**. We don't just write a story; we compile a story from the debris of the math. 
 *   **Math-to-Myth**: Every HP lost to a hazard is converted into a line of struggle.
-*   **Trait-Driven Prose**: A "Reckless" snake in v6.0 doesn't just have stat penalties; the narration describes its "foolish charge".
+*   **Trait-Driven Motion**: In v8.0, a "Reckless" snake's SVG path morphs with more "erratic" transitions.
