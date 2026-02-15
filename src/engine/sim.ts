@@ -1,5 +1,5 @@
 import {
-    SnakeState, GameEvent, Cell, Stats, EventType, EnvironmentParams, NarrativeFlag
+    SnakeState, GameEvent, Cell, Stats, EventType, EnvironmentParams, NarrativeFlag, TerrainType
 } from './types';
 import { BODIES, INSTINCTS, AFFINITIES, QUIRKS } from './traits';
 
