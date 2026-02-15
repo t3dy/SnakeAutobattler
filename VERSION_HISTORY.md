@@ -21,10 +21,11 @@
 
 ---
 
-## v3.0 - Visual Terrain (Current Plan)
-**Objective**: Add graphical texture to the narrative by representing the environment with emoji-based grid snapshots.
+## v3.0 - Animated Replay (The Visual Update)
+**Objective**: Represent the simulation world graphically using a dynamic emoji-based grid.
 
-### Proposed Changes
-- **Graphic Snapshots**: Instead of just text, the narrator will output a "Snapshot" of the snake's current vicinity using a 5x5 emoji grid (e.g., 🌲🌲🐍🌲🌲).
-- **Interactive Log**: A UI toggle to view the "Live Map" of the battle alongside the narrative.
-- **Improved AI**: Fine-tune the "Hunter" and "Scavenger" logic to better reflect their descriptions.
+### Key Features
+- **Watch Replay**: A new playback system that moves through the 60-tick simulation at a controllable pace.
+- **Emoji Arena**: A 16x12 grid that visualizes biomes (🌳🌵💧⛰️), snacks (🍎🐁), and hazards (⚠️).
+- **Snake Tracking**: Custom emojis for player (🐍) and enemy (👾) snakes, following their exact path from the event log.
+- **Micro-Animations**: Event-specific overlays like combat sparks (💥) and healing sparkles (✨) that appear in real-time on the grid.

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import { runBattle } from './engine/engine'
 import { BODIES, INSTINCTS, AFFINITIES, QUIRKS } from './engine/traits'
 import { SnakeDraft, BodyType, InstinctType, AffinityType, QuirkType } from './engine/types'
+import Arena from './components/Arena'
 
 function App() {
     const [gameState, setGameState] = useState<'draft' | 'battle' | 'recap'>('draft')
@@ -10,6 +11,11 @@ function App() {
     const [currentDraft, setCurrentDraft] = useState<Partial<SnakeDraft>>({})
     const [playerTeam, setPlayerTeam] = useState<SnakeDraft[]>([])
     const [battleResult, setBattleResult] = useState<any>(null)
+
+    // Replay State
+    const [currentTick, setCurrentTick] = useState(0)
+    const [isPlaying, setIsPlaying] = useState(false)
+    const playIntervalRef = useRef<number | null>(null)
 
     const handlePick = (category: keyof SnakeDraft, value: any) => {
         const newDraft = { ...currentDraft, [category]: value }
@@ -38,7 +44,26 @@ function App() {
         const result = runBattle(playerTeam, enemyTeam)
         setBattleResult(result)
         setGameState('recap')
+        setCurrentTick(0)
+        setIsPlaying(true)
     }
+
+    useEffect(() => {
+        if (isPlaying) {
+            playIntervalRef.current = window.setInterval(() => {
+                setCurrentTick(prev => {
+                    if (prev >= 60) {
+                        setIsPlaying(false)
+                        return 60
+                    }
+                    return prev + 1
+                })
+            }, 300)
+        } else {
+            if (playIntervalRef.current) clearInterval(playIntervalRef.current)
+        }
+        return () => { if (playIntervalRef.current) clearInterval(playIntervalRef.current) }
+    }, [isPlaying])
 
     return (
         <div className="app-container">
@@ -72,18 +97,37 @@ function App() {
 
                 {gameState === 'recap' && battleResult && (
                     <div className="recap-screen">
-                        <h2>THE DUST SETTLES</h2>
-                        <div className="battle-recap-text">{battleResult.narrative.recap}</div>
-                        <div className="snake-stories">
-                            {battleResult.narrative.snakeStories.map((s: any, i: number) => (
-                                <div key={i} className="snake-story-box">
-                                    <h3>{s.name}</h3>
-                                    <p className="snake-bio"><em>{s.bio}</em></p>
-                                    <p>{s.story}</p>
-                                </div>
-                            ))}
+                        <div className="visual-replay-container">
+                            <h2>ARENA REPLAY: TICK {currentTick}</h2>
+                            <Arena
+                                world={battleResult.world}
+                                events={battleResult.events}
+                                currentTick={currentTick}
+                                snakes={battleResult.snakes}
+                            />
+                            <div className="replay-controls">
+                                <button onClick={() => setIsPlaying(!isPlaying)}>{isPlaying ? 'PAUSE' : 'PLAY'}</button>
+                                <input type="range" min="0" max="60" value={currentTick} onChange={(e) => { setCurrentTick(parseInt(e.target.value)); setIsPlaying(false); }} />
+                            </div>
                         </div>
-                        <button onClick={() => { setPlayerTeam([]); setDraftingSnakeIdx(0); setGameState('draft'); }}>NEW EXPEDITION</button>
+
+                        <div className="narrative-results">
+                            <h2>THE DUST SETTLES</h2>
+                            <div className="battle-recap-text">{battleResult.narrative.recap}</div>
+                            <div className="snake-stories">
+                                {battleResult.narrative.snakeStories.map((s: any, i: number) => (
+                                    <div key={i} className="snake-story-box">
+                                        <h3>{s.name}</h3>
+                                        <p className="snake-bio"><em>{s.bio}</em></p>
+                                        <p>{s.story}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="bottom-actions">
+                            <button onClick={() => { setPlayerTeam([]); setDraftingSnakeIdx(0); setGameState('draft'); }}>NEW EXPEDITION</button>
+                        </div>
                     </div>
                 )}
             </main>
