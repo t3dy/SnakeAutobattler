@@ -5,12 +5,18 @@ import { BODIES, INSTINCTS, AFFINITIES, QUIRKS } from './engine/traits'
 import { SnakeDraft, BodyType, InstinctType, AffinityType, QuirkType, EnvironmentParams } from './engine/types'
 import Arena from './components/Arena'
 
-type EngineVersion = 'v1.0' | 'v2.0' | 'v3.0' | 'v4.0';
+type EngineVersion = 'v1.0' | 'v2.0' | 'v3.0' | 'v4.0' | 'v5.0';
 
 function App() {
     const [gameState, setGameState] = useState<'landing' | 'env_draft' | 'draft' | 'battle' | 'recap'>('landing')
-    const [engineVersion, setEngineVersion] = useState<EngineVersion>('v4.0')
-    const [envParams, setEnvParams] = useState<EnvironmentParams>({ climate: 'Standard', fauna: 'Standard', flora: 'Standard' })
+    const [engineVersion, setEngineVersion] = useState<EngineVersion>('v5.0')
+    const [envParams, setEnvParams] = useState<EnvironmentParams>({
+        climate: 'Standard',
+        fauna: 'Standard',
+        flora: 'Standard',
+        mode: 'SOLO',
+        theme: 'MEDIEVAL'
+    })
     const [draftingSnakeIdx, setDraftingSnakeIdx] = useState(0)
     const [currentDraft, setCurrentDraft] = useState<Partial<SnakeDraft>>({})
     const [playerTeam, setPlayerTeam] = useState<SnakeDraft[]>([])
@@ -23,7 +29,9 @@ function App() {
 
     const selectVersion = (v: EngineVersion) => {
         setEngineVersion(v)
-        if (v === 'v4.0') {
+        if (v === 'v5.0') {
+            setGameState('mode_select')
+        } else if (v === 'v4.0') {
             setGameState('env_draft')
         } else {
             setGameState('draft')
@@ -100,23 +108,28 @@ function App() {
                         <div className="version-grid">
                             <button className="version-btn" onClick={() => selectVersion('v1.0')}>
                                 <strong>v1.0 CORE</strong>
-                                <span>Legacy Log Simulation</span>
-                                <p className="version-desc">The original text-based transcript. Simple drafting, minimal flavor.</p>
+                                <span>Legacy Log</span>
+                                <p className="version-desc">The primordial transcript. Linear moves and basic combat logs.</p>
                             </button>
                             <button className="version-btn" onClick={() => selectVersion('v2.0')}>
                                 <strong>v2.0 PERSONALITY</strong>
-                                <span>Enhanced Bios & Flavor</span>
-                                <p className="version-desc">Introduces unique snake archetypes, origin bios, and personality-driven prose.</p>
+                                <span>Trait Bios</span>
+                                <p className="version-desc">Introduced Archetypes and Origin Bios for more flavorful storytelling.</p>
                             </button>
                             <button className="version-btn" onClick={() => selectVersion('v3.0')}>
                                 <strong>v3.0 VISUAL</strong>
-                                <span>Animated Arena Replay</span>
-                                <p className="version-desc">Watch the battle unfold in real-time on a 16x12 emoji grid with playback controls.</p>
+                                <span>Arena Replay</span>
+                                <p className="version-desc">The gift of sight. A real-time 16x12 emoji replay of the simulation.</p>
                             </button>
-                            <button className="version-btn v4-highlight" onClick={() => selectVersion('v4.0')}>
+                            <button className="version-btn" onClick={() => selectVersion('v4.0')}>
                                 <strong>v4.0 SAGA</strong>
-                                <span>The Dramatic Overhaul</span>
-                                <p className="version-desc">The ultimate evolution: Environment drafting, spatial memory, and arc-driven storytelling.</p>
+                                <span>Dramatic Arcs</span>
+                                <p className="version-desc">Evolution through memory. Spatial awareness and non-linear Story Compiling.</p>
+                            </button>
+                            <button className="version-btn v5-highlight" onClick={() => selectVersion('v5.0')}>
+                                <strong>v5.0 CHRONICLES</strong>
+                                <span>Honor & Steel</span>
+                                <p className="version-desc">The Ultimate Saga. Hot-Seat 2-Player modes, Medieval/Sci-Fi themes, and FTL-style dungeon depth.</p>
                             </button>
                         </div>
                     </div>

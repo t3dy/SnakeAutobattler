@@ -3,10 +3,15 @@ export type TerrainType = 'forest' | 'desert' | 'river' | 'mountain';
 export type Climate = 'Tropical' | 'Arid' | 'Alpine' | 'Standard';
 export type Density = 'High' | 'Sparse' | 'Standard' | 'Dense' | 'Barren';
 
+export type GameMode = 'SOLO' | 'HOTSEAT_BATTLE' | 'HOTSEAT_COOP';
+export type Theme = 'MEDIEVAL' | 'SCIFI';
+
 export interface EnvironmentParams {
     climate: Climate;
-    fauna: Density; // Food density
-    flora: Density; // Forest density
+    fauna: Density;
+    flora: Density;
+    mode: GameMode;
+    theme: Theme;
 }
 
 export interface Cell {
@@ -37,7 +42,7 @@ export interface SnakeDraft {
     quirk: QuirkType;
 }
 
-export type NarrativeFlag = 'WOUNDED' | 'DOMINANT' | 'PANICKED' | 'WELL_FED' | 'SCARRED';
+export type NarrativeFlag = 'WOUNDED' | 'DOMINANT' | 'PANICKED' | 'WELL_FED' | 'SCARRED' | 'HEROIC' | 'SACRIFICED' | 'ASCENDED';
 
 export interface SnakeState {
     id: string;
@@ -60,6 +65,9 @@ export interface SnakeState {
         enemies: { x: number; y: number }[];
     };
     evolution: Partial<Stats>;
+    experience: number;
+    honor: number;
+    gear: { name: string; type: string; bonus: Partial<Stats> }[];
 }
 
 export type EventType =
@@ -68,7 +76,7 @@ export type EventType =
     | 'COMBAT_TICK' | 'COMBAT_EXCHANGE' | 'TURNING_POINT' | 'COMBAT_END' | 'RETREAT' | 'KO'
     | 'STATUS_GAIN' | 'STATUS_LOSE' | 'CLAIM_TERRITORY'
     | 'PATROL' | 'AMBUSH' | 'DISCOVER' | 'TRACKING' | 'BATTLE_END'
-    | 'STORM_ADVANCE';
+    | 'STORM_ADVANCE' | 'SACRIFICE' | 'FEAT_ACCOMPLISHED' | 'LEVEL_UP' | 'GEAR_EQUIP';
 
 export interface GameEvent {
     id: string;
