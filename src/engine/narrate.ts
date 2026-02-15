@@ -1,3 +1,6 @@
+import { GameEvent, SnakeState, EnvironmentParams, Theme } from './types';
+import { BODIES, INSTINCTS, AFFINITIES, QUIRKS } from './traits';
+
 export function generateNarrative(events: GameEvent[], snakes: SnakeState[], params?: EnvironmentParams) {
     const theme = params?.theme || 'MEDIEVAL';
     const recap = generateDramaticRecap(events, snakes, theme);
@@ -37,7 +40,7 @@ function generateDramaticRecap(events: GameEvent[], snakes: SnakeState[], theme:
 }
 
 function compileStoryArcs(snakeEvents: GameEvent[], snake: SnakeState, allEvents: GameEvent[], theme: Theme) {
-    if (snakeEvents.length === 0) return { text: "A shadow in the undergrowth...", visualPrompt: "A sleek snake hidden in thick fog" };
+    if (snakeEvents.length === 0) return { fullStory: "A shadow in the undergrowth...", visuals: [{ text: "...", visualPrompt: "Hidden" }] };
 
     const arcs: { text: string, visualPrompt: string }[] = [];
     const isSciFi = theme === 'SCIFI';

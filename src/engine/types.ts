@@ -4,6 +4,12 @@ export type TerrainType = 'forest' | 'desert' | 'river' | 'mountain';
 export type Mode = 'SOLO' | 'HOTSEAT_BATTLE' | 'HOTSEAT_COOP';
 export type Theme = 'MEDIEVAL' | 'SCIFI';
 
+// Restoring missing types needed by other files
+export type BodyType = string;
+export type InstinctType = string;
+export type AffinityType = string;
+export type QuirkType = string;
+
 export interface EnvironmentParams {
     climate: string;
     fauna: string;
