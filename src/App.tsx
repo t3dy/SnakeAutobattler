@@ -175,24 +175,34 @@ function App() {
                             <p>Part strategy, part procedural story engine. This project explores <strong>Math-to-Myth</strong> translation, where every simulation event informs a thematic chronicle. Each version represents a leap in how simulation weights turn into world-building.</p>
                         </div>
 
-                        <div className="version-showcase">
-                            {[
-                                { id: 'v1.0', title: 'PRIMAL LOGS', desc: 'Core simulation loop. Pure functional movement and simple event tracing.' },
-                                { id: 'v2.0', title: 'IDENTITY SPARK', desc: 'Snake Traits and uniquely generated Origin Bios.' },
-                                { id: 'v3.0', title: 'GIFT OF SIGHT', desc: 'Emoji Arena introduces real-time visual replays.' },
-                                { id: 'v4.0', title: 'SAGA ENGINE', desc: 'Story Compiler groups events into dramatic arcs.' },
-                                { id: 'v5.0', title: 'HONOR & STEEL', desc: 'Themes (Sci-Fi/Medieval) and Hot-Seat Multiplayer.' },
-                                { id: 'v6.0', title: 'THE MERCHANT', desc: 'Interrupted simulation with Manual Tactics: Run, Hide, Fight.' },
-                                { id: 'v7.0', title: 'THE GHOST', desc: 'Autonomous Resolve, Typed Adversity, and Causal Cascades.' },
-                                { id: 'v8.0', title: 'CHRONICLE', desc: 'The Living Chronicle. Cinematic camera, SVG morphing, and atmospheric layering.' }
-                            ].map(v => (
-                                <div key={v.id} className={`version-card ${engineVersion === v.id ? 'active' : ''} ${v.id === 'v8.0' ? 'v8-glitch' : ''}`} onClick={() => selectVersion(v.id as any)}>
-                                    <div className="version-tag">{v.id}</div>
-                                    <h3>{v.title}</h3>
-                                    <p>{v.desc}</p>
-                                    <button className="select-btn">SELECT ENGINE</button>
+                        <div className="megaman-grid">
+                            <VersionCard id="v1.0" title="PRIMAL" desc="Core Loop" />
+                            <VersionCard id="v2.0" title="SPARK" desc="Identity" />
+                            <VersionCard id="v3.0" title="SIGHT" desc="Visuals" />
+
+                            <VersionCard id="v4.0" title="SAGA" desc="Narrative" />
+                            <div className="central-logo">
+                                <h2>SNAKE<br />AUTO<br />BATTLER</h2>
+                                <div className="evolution-subtitle">EVOLUTION</div>
+                            </div>
+                            <VersionCard id="v5.0" title="STEEL" desc="Themes" />
+
+                            <VersionCard id="v6.0" title="MERCHANT" desc="Agency" />
+                            <VersionCard id="v7.0" title="GHOST" desc="Resolve" />
+                            <VersionCard id="v8.0" title="CHRONICLE" desc="Cinematic" />
+                        </div>
+
+                        <div className="version-detail-pane">
+                            {engineVersion ? (
+                                <div className="detail-content animate-slide-up">
+                                    <span className="detail-tag">{engineVersion}</span>
+                                    <h4>{versions.find(v => v.id === engineVersion)?.title}</h4>
+                                    <p>{versions.find(v => v.id === engineVersion)?.desc}</p>
+                                    <button className="unleash-btn-large" onClick={() => setGameState('mode_select')}>INITIALIZE MODULE</button>
                                 </div>
-                            ))}
+                            ) : (
+                                <p className="select-hint">SELECT AN ENGINE ARCHIVE TO PROCEED</p>
+                            )}
                         </div>
 
                         <div className="tech-footer">
