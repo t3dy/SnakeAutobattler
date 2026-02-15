@@ -20,7 +20,9 @@ function App() {
     const [draftingSnakeIdx, setDraftingSnakeIdx] = useState(0)
     const [currentDraft, setCurrentDraft] = useState<Partial<SnakeDraft>>({})
     const [playerTeam, setPlayerTeam] = useState<SnakeDraft[]>([])
-    const [battleResult, setBattleResult] = useState<any>(null)
+    const [p2Team, setP2Team] = useState<SnakeDraft[]>([])
+    const [enemyTeam, setEnemyTeam] = useState<SnakeDraft[]>([])
+    const [draftTurn, setDraftTurn] = useState<'P1' | 'P2' | 'ENEMY'>('P1')
 
     // Replay State
     const [currentTick, setCurrentTick] = useState(0)
@@ -46,15 +48,47 @@ function App() {
     const handlePick = (category: keyof SnakeDraft, value: any) => {
         const newDraft = { ...currentDraft, [category]: value }
         if (category === 'quirk') {
-            const finalized = newDraft as SnakeDraft
-            const newTeam = [...playerTeam, finalized]
-            setPlayerTeam(newTeam)
-            setCurrentDraft({})
-            if (newTeam.length === 3) {
-                setGameState('battle')
-            } else {
-                setDraftingSnakeIdx(newTeam.length)
-            }
+            const handleDraftComplete = (draft: SnakeDraft) => {
+                const isBattle = envParams.mode === 'HOTSEAT_BATTLE';
+                const isCoop = envParams.mode === 'HOTSEAT_COOP';
+
+                if (draftTurn === 'P1') {
+                    const nextTeam = [...playerTeam, draft];
+                    setPlayerTeam(nextTeam);
+                    if (isBattle) {
+                        setDraftTurn('P2');
+                    } else if (isCoop) {
+                        setDraftTurn('P2'); // Co-op also drafts together
+                    } else {
+                        setDraftTurn('ENEMY');
+                    }
+                } else if (draftTurn === 'P2') {
+                    const nextTeam = [...p2Team, draft];
+                    setP2Team(nextTeam);
+                    setDraftTurn('ENEMY');
+                } else { // draftTurn === 'ENEMY'
+                    setEnemyTeam([...enemyTeam, draft]);
+                    setDraftTurn('P1');
+                    setDraftingSnakeIdx(prev => prev + 1);
+                }
+
+                // Check if all slots (2 for player side total, or 1 each) are filled
+                // Actually, let's just use draftingSnakeIdx to count total "snake slots" being drafted.
+                // If each team has 2 snakes:
+                if (draftingSnakeIdx === 1 && (draftTurn === 'ENEMY' || (isBattle && draftTurn === 'P2'))) {
+                    startSimulation();
+                }
+                setCurrentDraft({});
+            };
+
+            const startSimulation = () => {
+                const result = runBattle(playerTeam, p2Team.length > 0 ? p2Team : enemyTeam, envParams);
+                setBattleResult(result);
+                setGameState('battle');
+                setCurrentTick(0);
+            };
+
+            handleDraftComplete(newDraft as SnakeDraft); // Call the new function
         } else {
             setCurrentDraft(newDraft)
         }
