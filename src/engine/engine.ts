@@ -68,6 +68,7 @@ function createSnake(draft: SnakeDraft, name: string, team: 'player' | 'enemy', 
         evolution: {},
         experience: 0,
         honor: 0,
-        gear: []
+        gear: [],
+        scavengeProfit: 0
     };
 }
