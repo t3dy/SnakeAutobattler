@@ -1,0 +1,56 @@
+:root {
+    font-family: 'Press Start 2P', system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+
+    color-scheme: dark;
+    color: #33ff33;
+    background-color: #1a1a1a;
+
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    margin: 0;
+    display: flex;
+    place-items: center;
+    min-width: 320px;
+    min-height: 100vh;
+}
+
+#root {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem;
+    text-align: center;
+}
+
+button {
+    border-radius: 4px;
+    border: 2px solid #33ff33;
+    padding: 0.6em 1.2em;
+    font-size: 1em;
+    font-weight: 500;
+    font-family: inherit;
+    background-color: transparent;
+    cursor: pointer;
+    transition: all 0.25s;
+    color: #33ff33;
+    margin: 5px;
+}
+
+button:hover {
+    background-color: #33ff33;
+    color: #1a1a1a;
+}
+
+button:active {
+    transform: scale(0.95);
+}
+
+.hidden {
+    display: none !important;
+}

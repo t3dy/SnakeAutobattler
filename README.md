@@ -1,4 +1,4 @@
-# Snake Autobattler
+## 🎮 [Play Snake Autobattler v1.0](https://t3dy.github.io/SnakeAutobattler/)
 
 A strategic fusion of the classic **Snake** arcade game and modern **Autobattler** mechanics.
 
@@ -6,8 +6,8 @@ A strategic fusion of the classic **Snake** arcade game and modern **Autobattler
 Draft unique snake segments with specialized abilities and watch them navigate the arena automatically to outmaneuver rival snakes.
 
 ## 🛠️ Tech Stack
-- HTML5 Canvas
-- Vanilla JavaScript
+- React & TypeScript
+- Vite
 - CSS3
 
 ## 🏗️ Project Structure
