@@ -4,12 +4,13 @@ import { runBattle } from './engine/engine'
 import { BODIES, INSTINCTS, AFFINITIES, QUIRKS } from './engine/traits'
 import { SnakeDraft, BodyType, InstinctType, AffinityType, QuirkType, EnvironmentParams } from './engine/types'
 import Arena from './components/Arena'
+import { generateNarrative } from './engine/narrate'
 
-type EngineVersion = 'v1.0' | 'v2.0' | 'v3.0' | 'v4.0' | 'v5.0';
+type EngineVersion = 'v1.0' | 'v2.0' | 'v3.0' | 'v4.0' | 'v5.0' | 'v6.0';
 
 function App() {
-    const [gameState, setGameState] = useState<'landing' | 'mode_select' | 'env_draft' | 'draft' | 'battle' | 'recap'>('landing')
-    const [engineVersion, setEngineVersion] = useState<EngineVersion>('v5.0')
+    const [gameState, setGameState] = useState<any>('landing')
+    const [engineVersion, setEngineVersion] = useState<EngineVersion>('v6.0')
     const [envParams, setEnvParams] = useState<EnvironmentParams>({
         climate: 'Standard',
         fauna: 'Standard',
@@ -24,14 +25,17 @@ function App() {
     const [enemyTeam, setEnemyTeam] = useState<SnakeDraft[]>([])
     const [draftTurn, setDraftTurn] = useState<'P1' | 'P2' | 'ENEMY'>('P1')
 
-    // Replay State
+    // Battle/Sim State
+    const [battleResult, setBattleResult] = useState<any>(null)
+    const [activeSim, setActiveSim] = useState<any>(null)
+    const [currentEncounter, setCurrentEncounter] = useState<any>(null)
     const [currentTick, setCurrentTick] = useState(0)
     const [isPlaying, setIsPlaying] = useState(false)
     const playIntervalRef = useRef<number | null>(null)
 
     const selectVersion = (v: EngineVersion) => {
         setEngineVersion(v)
-        if (v === 'v5.0') {
+        if (v === 'v5.0' || v === 'v6.0') {
             setGameState('mode_select')
         } else if (v === 'v4.0') {
             setGameState('env_draft')
@@ -41,353 +45,235 @@ function App() {
     }
 
     const handleEnvPick = (category: keyof EnvironmentParams, value: any) => {
-        const next = { ...envParams, [category]: value }
-        setEnvParams(next)
+        setEnvParams(prev => ({ ...prev, [category]: value }))
     }
 
     const handlePick = (category: keyof SnakeDraft, value: any) => {
         const newDraft = { ...currentDraft, [category]: value }
         if (category === 'quirk') {
-            const handleDraftComplete = (draft: SnakeDraft) => {
-                const isBattle = envParams.mode === 'HOTSEAT_BATTLE';
-                const isCoop = envParams.mode === 'HOTSEAT_COOP';
-
-                if (draftTurn === 'P1') {
-                    const nextTeam = [...playerTeam, draft];
-                    setPlayerTeam(nextTeam);
-                    if (isBattle) {
-                        setDraftTurn('P2');
-                    } else if (isCoop) {
-                        setDraftTurn('P2'); // Co-op also drafts together
-                    } else {
-                        setDraftTurn('ENEMY');
-                    }
-                } else if (draftTurn === 'P2') {
-                    const nextTeam = [...p2Team, draft];
-                    setP2Team(nextTeam);
-                    setDraftTurn('ENEMY');
-                } else { // draftTurn === 'ENEMY'
-                    setEnemyTeam([...enemyTeam, draft]);
-                    setDraftTurn('P1');
-                    setDraftingSnakeIdx(prev => prev + 1);
-                }
-
-                // Check if all slots (2 for player side total, or 1 each) are filled
-                // Actually, let's just use draftingSnakeIdx to count total "snake slots" being drafted.
-                // If each team has 2 snakes:
-                if (draftingSnakeIdx === 1 && (draftTurn === 'ENEMY' || (isBattle && draftTurn === 'P2'))) {
-                    startSimulation();
-                }
-                setCurrentDraft({});
-            };
-
-            const startSimulation = () => {
-                const result = runBattle(playerTeam, p2Team.length > 0 ? p2Team : enemyTeam, envParams);
-                setBattleResult(result);
-                setGameState('battle');
-                setCurrentTick(0);
-            };
-
-            handleDraftComplete(newDraft as SnakeDraft); // Call the new function
+            handleDraftComplete(newDraft as SnakeDraft)
         } else {
             setCurrentDraft(newDraft)
         }
     }
 
+    const handleDraftComplete = (draft: SnakeDraft) => {
+        const isBattle = envParams.mode === 'HOTSEAT_BATTLE';
+        const isCoop = envParams.mode === 'HOTSEAT_COOP';
+
+        if (draftTurn === 'P1') {
+            setPlayerTeam(prev => [...prev, draft]);
+            if (isBattle || isCoop) {
+                setDraftTurn('P2');
+            } else {
+                setDraftTurn('ENEMY');
+            }
+        } else if (draftTurn === 'P2') {
+            setP2Team(prev => [...prev, draft]);
+            setDraftTurn('ENEMY');
+        } else {
+            setEnemyTeam(prev => [...prev, draft]);
+            setDraftTurn('P1');
+            setDraftingSnakeIdx(prev => prev + 1);
+        }
+    }
+
+    useEffect(() => {
+        // Check if draft is done
+        const targetCount = 2; // Assuming 2 snakes per team for this prototype
+        if (draftingSnakeIdx >= targetCount) {
+            setGameState('battle')
+        }
+    }, [draftingSnakeIdx])
+
     const startFight = () => {
-        const enemyTeam: SnakeDraft[] = playerTeam.map(() => ({
+        const enemyDrafts: SnakeDraft[] = enemyTeam.length > 0 ? enemyTeam : [1, 2, 3].map(() => ({
             body: Object.keys(BODIES)[Math.floor(Math.random() * 4)] as BodyType,
             instinct: Object.keys(INSTINCTS)[Math.floor(Math.random() * 4)] as InstinctType,
             affinity: Object.keys(AFFINITIES)[Math.floor(Math.random() * 4)] as AffinityType,
             quirk: Object.keys(QUIRKS)[Math.floor(Math.random() * 4)] as QuirkType
         }))
-        const [activeSim, setActiveSim] = useState<any>(null)
-        const [currentEncounter, setCurrentEncounter] = useState<any>(null)
 
-        const startFight = () => {
-            const enemyTeam: SnakeDraft[] = [1, 2, 3].map(() => ({
-                body: Object.keys(BODIES)[Math.floor(Math.random() * 4)] as BodyType,
-                instinct: Object.keys(INSTINCTS)[Math.floor(Math.random() * 4)] as InstinctType,
-                affinity: Object.keys(AFFINITIES)[Math.floor(Math.random() * 4)] as AffinityType,
-                quirk: Object.keys(QUIRKS)[Math.floor(Math.random() * 4)] as QuirkType
-            }))
-            const result = runBattle(playerTeam, enemyTeam, envParams)
+        const result = runBattle(playerTeam, enemyDrafts, envParams)
 
-            if (result.sim.isWaitingForChoice) {
-                setActiveSim(result.sim)
-                setGameState('battle')
-                processSimEvents(result.sim)
-            } else {
-                setBattleResult(result)
-                setGameState('recap')
-                setCurrentTick(0)
-            }
+        if (engineVersion === 'v6.0' && result.sim.isWaitingForChoice) {
+            setActiveSim(result.sim)
+            processSimEvents(result.sim)
+        } else {
+            setBattleResult(result)
+            setGameState('recap')
+            if (engineVersion === 'v3.0' || engineVersion === 'v4.0') setIsPlaying(true)
         }
+    }
 
-        const processSimEvents = (sim: any) => {
-            const pending = sim.events.find((e: any) => e.type === 'PENDING_CHOICE' && !e.processed)
-            if (pending) {
-                pending.processed = true
-                setCurrentEncounter(pending)
-            }
+    const processSimEvents = (sim: any) => {
+        const pending = sim.events.find((e: any) => e.type === 'PENDING_CHOICE' && !e.processed)
+        if (pending) {
+            pending.processed = true
+            setCurrentEncounter(pending)
         }
+    }
 
-        const makeChoice = (choice: 'RUN' | 'HIDE' | 'FIGHT') => {
-            if (!activeSim || !currentEncounter) return
-            activeSim.handleChoice(currentEncounter.snakeId, choice)
-            setCurrentEncounter(null)
+    const makeChoice = (choice: 'RUN' | 'HIDE' | 'FIGHT') => {
+        if (!activeSim || !currentEncounter) return
+        activeSim.handleChoice(currentEncounter.snakeId, choice)
+        setCurrentEncounter(null)
 
-            activeSim.run()
+        activeSim.run()
 
-            if (activeSim.isWaitingForChoice) {
-                processSimEvents(activeSim)
-            } else {
-                setBattleResult({
-                    world: activeSim.world,
-                    events: activeSim.events,
-                    narrative: generateNarrative(activeSim.events, activeSim.snakes, envParams),
-                    snakes: activeSim.snakes
-                })
-                setGameState('recap')
-                setCurrentTick(0)
-                setActiveSim(null)
-            }
+        if (activeSim.isWaitingForChoice) {
+            processSimEvents(activeSim)
+        } else {
+            setBattleResult({
+                world: activeSim.world,
+                events: activeSim.events,
+                narrative: generateNarrative(activeSim.events, activeSim.snakes, envParams),
+                snakes: activeSim.snakes
+            })
+            setGameState('recap')
+            setActiveSim(null)
         }
+    }
 
-        useEffect(() => {
-            if (isPlaying) {
-                playIntervalRef.current = window.setInterval(() => {
-                    setCurrentTick(prev => {
-                        if (prev >= 60) {
-                            setIsPlaying(false)
-                            return 60
-                        }
-                        return prev + 1
-                    })
-                }, 300)
-            } else {
-                if (playIntervalRef.current) clearInterval(playIntervalRef.current)
-            }
-            return () => { if (playIntervalRef.current) clearInterval(playIntervalRef.current) }
-        }, [isPlaying])
+    useEffect(() => {
+        if (isPlaying) {
+            playIntervalRef.current = window.setInterval(() => {
+                setCurrentTick(prev => prev >= 60 ? (setIsPlaying(false), 60) : prev + 1)
+            }, 300)
+        } else if (playIntervalRef.current) {
+            clearInterval(playIntervalRef.current)
+        }
+        return () => { if (playIntervalRef.current) clearInterval(playIntervalRef.current) }
+    }, [isPlaying])
 
-        return (
-            <div className="app-container">
-                <header>
-                    <h1>SNAKE AUTOBATTLER {gameState !== 'landing' && <span className="version-tag">{engineVersion}</span>}</h1>
-                </header>
+    return (
+        <div className="app-container">
+            <header>
+                <h1>SNAKE AUTOBATTLER {gameState !== 'landing' && <span className="version-tag">{engineVersion}</span>}</h1>
+            </header>
 
-                <main>
-                    {gameState === 'landing' && (
-                        <div className="landing-screen">
-                            <h2>SELECT EXPEDITION MODULE</h2>
-                            <div className="version-grid">
-                                <button className="version-btn" onClick={() => selectVersion('v1.0')}>
-                                    <strong>v1.0 CORE</strong>
-                                    <span>Legacy Log</span>
-                                    <p className="version-desc">The primordial transcript. Linear moves and basic combat logs.</p>
+            <main>
+                {gameState === 'landing' && (
+                    <div className="landing-screen">
+                        <h2>ARCHIVE HUB</h2>
+                        <div className="version-grid">
+                            {['v1.0', 'v2.0', 'v3.0', 'v4.0', 'v5.0', 'v6.0'].map(v => (
+                                <button key={v} className={`version-btn ${v === 'v6.0' ? 'v5-highlight' : ''}`} onClick={() => selectVersion(v as any)}>
+                                    <strong>{v}</strong>
+                                    <span>{v === 'v6.0' ? 'MERCHANT' : 'LEGACY'}</span>
                                 </button>
-                                <button className="version-btn" onClick={() => selectVersion('v2.0')}>
-                                    <strong>v2.0 PERSONALITY</strong>
-                                    <span>Trait Bios</span>
-                                    <p className="version-desc">Introduced Archetypes and Origin Bios for more flavorful storytelling.</p>
-                                </button>
-                                <button className="version-btn" onClick={() => selectVersion('v3.0')}>
-                                    <strong>v3.0 VISUAL</strong>
-                                    <span>Arena Replay</span>
-                                    <p className="version-desc">The gift of sight. A real-time 16x12 emoji replay of the simulation.</p>
-                                </button>
-                                <button className="version-btn" onClick={() => selectVersion('v4.0')}>
-                                    <strong>v4.0 SAGA</strong>
-                                    <span>Dramatic Arcs</span>
-                                    <p className="version-desc">Evolution through memory. Spatial awareness and non-linear Story Compiling.</p>
-                                </button>
-                                <button className="version-btn v5-highlight" onClick={() => selectVersion('v5.0')}>
-                                    <strong>v5.0 CHRONICLES</strong>
-                                    <span>Honor & Steel</span>
-                                    <p className="version-desc">The Ultimate Saga. Hot-Seat 2-Player modes, Medieval/Sci-Fi themes, and FTL-style dungeon depth.</p>
-                                </button>
-                            </div>
-                            <p className="landing-hint">All versions share the same core 16-trait drafting system.</p>
+                            ))}
                         </div>
-                    )}
+                    </div>
+                )}
 
-                    {gameState === 'mode_select' && (
-                        <div className="mode-select-screen">
-                            <h2>CHRONICLE SETTINGS</h2>
-                            <div className="v5-selection-container">
-                                <div className="v5-panel">
-                                    <h3>THEME OVERHAUL</h3>
-                                    <div className="theme-grid">
-                                        <button className={envParams.theme === 'MEDIEVAL' ? 'active theme-btn' : 'theme-btn'} onClick={() => handleEnvPick('theme', 'MEDIEVAL')}>
-                                            <strong>⚔️ MEDIEVAL</strong>
-                                            <span>Honor, Steel & Castles</span>
-                                        </button>
-                                        <button className={envParams.theme === 'SCIFI' ? 'active theme-btn' : 'theme-btn'} onClick={() => handleEnvPick('theme', 'SCIFI')}>
-                                            <strong>🔫 SCI-FI</strong>
-                                            <span>Lasers, Outposts & Energy</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="v5-panel">
-                                    <h3>GAME MODE</h3>
-                                    <div className="mode-grid">
-                                        <button className={envParams.mode === 'SOLO' ? 'active mode-btn' : 'mode-btn'} onClick={() => handleEnvPick('mode', 'SOLO')}>
-                                            <strong>👤 SOLO</strong>
-                                            <span>Classic Exploration</span>
-                                        </button>
-                                        <button className={envParams.mode === 'HOTSEAT_BATTLE' ? 'active mode-btn' : 'mode-btn'} onClick={() => handleEnvPick('mode', 'HOTSEAT_BATTLE')}>
-                                            <strong>🤜 BATTLE</strong>
-                                            <span>Hot-Seat P1 vs P2</span>
-                                        </button>
-                                        <button className={envParams.mode === 'HOTSEAT_COOP' ? 'active mode-btn' : 'mode-btn'} onClick={() => handleEnvPick('mode', 'HOTSEAT_COOP')}>
-                                            <strong>🤝 CO-OP</strong>
-                                            <span>Shared Expedition</span>
-                                        </button>
-                                    </div>
-                                </div>
+                {gameState === 'mode_select' && (
+                    <div className="mode-select-screen">
+                        <h2>CHRONICLE SETTINGS</h2>
+                        <div className="v5-selection-container">
+                            <div className="v5-panel">
+                                <h3>THEME</h3>
+                                <button className={envParams.theme === 'MEDIEVAL' ? 'active' : ''} onClick={() => handleEnvPick('theme', 'MEDIEVAL')}>⚔️ MEDIEVAL</button>
+                                <button className={envParams.theme === 'SCIFI' ? 'active' : ''} onClick={() => handleEnvPick('theme', 'SCIFI')}>🔫 SCI-FI</button>
                             </div>
-
-                            <div className="mode-description-box">
-                                {envParams.mode === 'HOTSEAT_COOP' && <p>🤝 <strong>COOPERATIVE MODE</strong>: Work together to survive the shrinking arena. Gain <strong>HONOR</strong> through sacrificial feats for the community.</p>}
-                                {envParams.mode === 'HOTSEAT_BATTLE' && <p>⚔️ <strong>BATTLE MODE</strong>: Move through secret terrain to gain XP and gear before a forced final clash at Tick 40.</p>}
-                                {envParams.mode === 'SOLO' && <p>👤 <strong>SOLO EXPEDITION</strong>: The single-player journey through the chronicles.</p>}
-                            </div>
-
-                            <button className="proceed-btn" onClick={() => setGameState('env_draft')}>PROCEED TO WORLD DRAFT</button>
-                        </div>
-                    )}
-
-                    {gameState === 'env_draft' && (
-                        <div className="env-draft-screen">
-                            <h2>DEFINE THE ARENA</h2>
-                            <div className="env-options-grid">
-                                <div className="env-card">
-                                    <h3>CLIMATE</h3>
-                                    <button className={envParams.climate === 'Standard' ? 'active' : ''} onClick={() => handleEnvPick('climate', 'Standard')}>STANDARD</button>
-                                    <button className={envParams.climate === 'Tropical' ? 'active' : ''} onClick={() => handleEnvPick('climate', 'Tropical')}>TROPICAL (RIVERS)</button>
-                                    <button className={envParams.climate === 'Arid' ? 'active' : ''} onClick={() => handleEnvPick('climate', 'Arid')}>ARID (DUNES)</button>
-                                    <button className={envParams.climate === 'Alpine' ? 'active' : ''} onClick={() => handleEnvPick('climate', 'Alpine')}>ALPINE (PEAKS)</button>
-                                </div>
-                                <div className="env-card">
-                                    <h3>FAUNA (FOOD)</h3>
-                                    <button className={envParams.fauna === 'Standard' ? 'active' : ''} onClick={() => handleEnvPick('fauna', 'Standard')}>STANDARD</button>
-                                    <button className={envParams.fauna === 'High' ? 'active' : ''} onClick={() => handleEnvPick('fauna', 'High')}>DENSE</button>
-                                    <button className={envParams.fauna === 'Sparse' ? 'active' : ''} onClick={() => handleEnvPick('fauna', 'Sparse')}>SPARSE</button>
-                                </div>
-                                <div className="env-card">
-                                    <h3>FLORA (FOREST)</h3>
-                                    <button className={envParams.flora === 'Standard' ? 'active' : ''} onClick={() => handleEnvPick('flora', 'Standard')}>STANDARD</button>
-                                    <button className={envParams.flora === 'Dense' ? 'active' : ''} onClick={() => handleEnvPick('flora', 'Dense')}>DENSE</button>
-                                    <button className={envParams.flora === 'Barren' ? 'active' : ''} onClick={() => handleEnvPick('flora', 'Barren')}>BARREN</button>
-                                </div>
-                            </div>
-                            <button className="proceed-btn" onClick={() => setGameState('draft')}>LOCK PARAMETERS & DRAFT SQUAD</button>
-                        </div>
-                    )}
-
-                    {gameState === 'draft' && (
-                        <div className="draft-screen">
-                            <h2>DRAFTING SNAKE {draftingSnakeIdx + 1}/3</h2>
-                            <div className="draft-categories">
-                                {!currentDraft.body && <CategoryBox title="BODY" options={BODIES} onSelect={(v: any) => handlePick('body', v)} />}
-                                {currentDraft.body && !currentDraft.instinct && <CategoryBox title="INSTINCT" options={INSTINCTS} onSelect={(v: any) => handlePick('instinct', v)} />}
-                                {currentDraft.instinct && !currentDraft.affinity && <CategoryBox title="AFFINITY" options={AFFINITIES} onSelect={(v: any) => handlePick('affinity', v)} />}
-                                {currentDraft.affinity && !currentDraft.quirk && <CategoryBox title="QUIRK" options={QUIRKS} onSelect={(v: any) => handlePick('quirk', v)} />}
-                            </div>
-                            <div className="current-snake-preview">
-                                {Object.entries(currentDraft).map(([k, v]) => <div key={k}>{k.toUpperCase()}: {v}</div>)}
+                            <div className="v5-panel">
+                                <h3>MODE</h3>
+                                <button className={envParams.mode === 'SOLO' ? 'active' : ''} onClick={() => handleEnvPick('mode', 'SOLO')}>👤 SOLO</button>
+                                <button className={envParams.mode === 'HOTSEAT_BATTLE' ? 'active' : ''} onClick={() => handleEnvPick('mode', 'HOTSEAT_BATTLE')}>🤜 BATTLE</button>
                             </div>
                         </div>
-                    )}
+                        <button className="confirm-btn" onClick={() => setGameState('env_draft')}>PROCEED</button>
+                    </div>
+                )}
 
-                    {gameState === 'battle' && (
-                        <div className="battle-screen">
-                            <h2>ARENA PARAMETERS SET</h2>
-                            <p>Climate: {envParams.climate} | Fauna: {envParams.fauna} | Flora: {envParams.flora}</p>
-                            <button onClick={startFight}>UNLEASH THE SAGA</button>
+                {gameState === 'env_draft' && (
+                    <div className="env-draft-screen">
+                        <h2>ARENA PARAMETERS</h2>
+                        <button onClick={() => setGameState('draft')}>LOCK & DRAFT</button>
+                    </div>
+                )}
+
+                {gameState === 'draft' && (
+                    <div className="draft-screen">
+                        <h2>DRAFTING {draftTurn} ({draftingSnakeIdx + 1}/2)</h2>
+                        <div className="draft-categories">
+                            {!currentDraft.body && <CategoryBox title="BODY" options={BODIES} onSelect={(v: any) => handlePick('body', v)} />}
+                            {currentDraft.body && !currentDraft.instinct && <CategoryBox title="INSTINCT" options={INSTINCTS} onSelect={(v: any) => handlePick('instinct', v)} />}
+                            {currentDraft.instinct && !currentDraft.affinity && <CategoryBox title="AFFINITY" options={AFFINITIES} onSelect={(v: any) => handlePick('affinity', v)} />}
+                            {currentDraft.affinity && !currentDraft.quirk && <CategoryBox title="QUIRK" options={QUIRKS} onSelect={(v: any) => handlePick('quirk', v)} />}
                         </div>
-                    )}
+                    </div>
+                )}
 
-                    {gameState === 'recap' && battleResult && (
-                        <div className="recap-screen">
-
-                            {(engineVersion === 'v3.0' || engineVersion === 'v4.0') && (
-                                <div className="visual-replay-container">
-                                    <h2>ARENA REPLAY: TICK {currentTick}</h2>
-                                    <Arena
-                                        world={battleResult.world}
-                                        events={battleResult.events}
-                                        currentTick={currentTick}
-                                        snakes={battleResult.snakes}
-                                        params={envParams}
-                                    />
-                                    <div className="replay-controls">
-                                        <button onClick={() => setIsPlaying(!isPlaying)}>{isPlaying ? 'PAUSE' : 'PLAY'}</button>
-                                        <input type="range" min="0" max="60" value={currentTick} onChange={(e) => { setCurrentTick(parseInt(e.target.value)); setIsPlaying(false); }} />
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="narrative-results">
-                                <h2>THE DUST SETTLES</h2>
-                                <div className="battle-recap-text">{battleResult.narrative.recap}</div>
-                                <div className="snake-stories">
-                                    {battleResult.narrative.snakeStories.map((s: any, i: number) => (
-                                        <div key={i} className="snake-story-box">
-                                            <h3>{s.name}</h3>
-                                            {(engineVersion !== 'v1.0') && (
-                                                <p className="snake-bio"><em>{s.bio}</em></p>
-                                            )}
-                                            {(engineVersion === 'v5.0') && (
-                                                <div className="snake-stats-summary">
-                                                    <span>Honor: {s.honor}</span> | <span>XP: {s.experience}</span> | <span>Profit: {s.scavengeProfit}g</span>
-                                                </div>
-                                            )}
-                                            {typeof s.story === 'string' ? (
-                                                <p>{s.story}</p>
-                                            ) : (
-                                                <div className="story-timeline">
-                                                    {s.story.visuals.map((arc: any, j: number) => (
-                                                        <div key={j} className="story-arc">
-                                                            <div className="arc-depiction-placeholder">
-                                                                📷 {arc.visualPrompt}
-                                                            </div>
-                                                            <p>{arc.text}</p>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
+                {gameState === 'battle' && (
+                    <div className="battle-screen">
+                        {activeSim ? (
+                            <div className="scene-container">
+                                <h2>THE SAGA UNFOLDS</h2>
+                                {currentEncounter && (
+                                    <div className="choice-modal">
+                                        <div className="scene-description">
+                                            <p>A critical junction in the {currentEncounter.terrain}!</p>
+                                            <div className="scene-visual">📷 [DEPICTION REQUIRED]</div>
                                         </div>
-                                    ))}
+                                        <div className="choice-options">
+                                            <button onClick={() => makeChoice('RUN')}>RUN</button>
+                                            <button onClick={() => makeChoice('HIDE')}>HIDE</button>
+                                            <button onClick={() => makeChoice('FIGHT')}>FIGHT</button>
+                                        </div>
+                                    </div>
+                                )}
+                                {!currentEncounter && <p className="loading-text">Advancing time...</p>}
+                            </div>
+                        ) : (
+                            <div className="pre-battle">
+                                <h2>READY FOR EXPEDITION</h2>
+                                <button className="unleash-btn" onClick={startFight}>UNLEASH THE SAGA</button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {gameState === 'recap' && battleResult && (
+                    <div className="recap-screen">
+                        <h2>THE CHRONICLE OF SURVIVAL</h2>
+                        <div className="battle-recap-text">{battleResult.narrative.recap}</div>
+                        <div className="snake-stories">
+                            {battleResult.narrative.snakeStories.map((s: any, i: number) => (
+                                <div key={i} className="snake-story-box">
+                                    <h3>{s.name}</h3>
+                                    <p className="snake-bio"><em>{s.bio}</em></p>
+                                    {engineVersion === 'v6.0' ? (
+                                        <div className="persistent-history">
+                                            {battleResult.snakes[i].storyHistory.map((line: string, j: number) => (
+                                                <p key={j} className="history-line">📜 {line}</p>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p>{typeof s.story === 'string' ? s.story : s.story.fullStory}</p>
+                                    )}
                                 </div>
-                            </div>
-
-                            <div className="bottom-actions">
-                                <button onClick={() => { setPlayerTeam([]); setDraftingSnakeIdx(0); setGameState('landing'); }}>RETURN TO HUB</button>
-                            </div>
+                            ))}
                         </div>
-                    )}
-                </main>
-            </div>
-        )
-    }
+                        <button onClick={() => window.location.reload()}>NEW EXPEDITION</button>
+                    </div>
+                )}
+            </main>
+        </div>
+    )
+}
 
-    function CategoryBox({ title, options, onSelect }: any) {
-        return (
-            <div className="category-box">
-                <h3>SELECT {title}</h3>
-                <div className="option-grid">
-                    {Object.keys(options).map(opt => (
-                        <div key={opt} className="trait-card">
-                            <button onClick={() => onSelect(opt)}>{opt}</button>
-                            <p className="trait-desc">{options[opt].description}</p>
-                        </div>
-                    ))}
-                </div>
+function CategoryBox({ title, options, onSelect }: any) {
+    return (
+        <div className="category-box">
+            <h3>{title}</h3>
+            <div className="option-grid">
+                {Object.keys(options).map(opt => (
+                    <button key={opt} onClick={() => onSelect(opt)}>{opt}</button>
+                ))}
             </div>
-        )
-    }
+        </div>
+    )
+}
 
-    export default App
+export default App
