@@ -35,7 +35,7 @@ const CinematicVideo: React.FC<CinematicVideoProps> = ({ choice, snake, theme, o
     }, [step, onComplete]);
 
     return (
-        <div className={`cinematic-stage ${theme.toLowerCase()}`}>
+        <div className={`cinematic-stage ${theme.toLowerCase()}`} style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
             <div className="video-viewport">
                 <div className={`animation-container ${choice.toLowerCase()}`}>
                     {/* Procedural SVG Snake Based on Choice */}

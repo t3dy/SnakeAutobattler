@@ -51,47 +51,54 @@ export default function SnakeSkinLayout({ versions, onSelectVersion, onSelectToy
             {/* Interactive Content Layer */}
             <div className="snake-content-layer">
 
-                {/* Version Scales */}
-                {/* Version Scales - Only Latest 4 */}
-                {versions.slice(-4).map((v, i) => {
-                    const idx = versions.length - 4 + i;
-                    const pos = getPos(i, 4);
-                    return (
-                        <div
-                            key={v.id}
-                            className={`scale-node ${currentVersion === v.id ? 'active' : ''}`}
-                            style={{ left: pos.left, top: pos.top }}
-                            onClick={() => onSelectVersion(v.id)}
-                            onMouseEnter={() => { }} // Could trigger sound
-                        >
-                            <span className="scale-id">{v.id}</span>
-                            <span className="scale-title">{v.title}</span>
-                        </div>
-                    );
-                })}
+                {/* --- LEGACY NODE (v1.0) --- */}
+                <div
+                    className={`scale-node ${currentVersion === 'v1.0' ? 'active' : ''}`}
+                    style={{ left: '15%', top: '75%' }}
+                    onClick={() => onSelectVersion('v1.0')}
+                >
+                    <span className="scale-id">v1.0</span>
+                    <span className="scale-title">THE PRIMORDIAL COIL</span>
+                </div>
 
-                {/* Internal Organs (Toys) */}
-                <div className="organ-node organ-radiant" style={{ left: '25%', top: '20%' }} onClick={() => onSelectToy('hall_of_designers')}>
+                {/* --- CURRENT NODE (v13.2) --- */}
+                <div
+                    className={`scale-node ${currentVersion === 'v13.2' ? 'active' : ''}`}
+                    style={{ left: '80%', top: '15%', borderColor: '#00ff7f', boxShadow: '0 0 20px rgba(0,255,127,0.3)' }}
+                    onClick={() => onSelectVersion('v13.2')}
+                >
+                    <span className="scale-id">v13.2</span>
+                    <span className="scale-title">THE NARRATIVE WEAVE</span>
+                </div>
+
+                {/* --- ORGANS (TOYS) --- */}
+
+                {/* 1. Design (Hall of Designers) */}
+                <div className="organ-node organ-radiant" style={{ left: '30%', top: '30%' }} onClick={() => onSelectToy('hall_of_designers')}>
                     <span className="organ-icon">🐍</span>
                     <span className="organ-label">DESIGN</span>
                 </div>
 
-                <div className="organ-node organ-tuner" style={{ left: '60%', top: '20%' }} onClick={() => onSelectToy('resonance_tuner')}>
+                {/* 2. Tune (Resonance Tuner) */}
+                <div className="organ-node organ-tuner" style={{ left: '50%', top: '50%' }} onClick={() => onSelectToy('resonance_tuner')}>
                     <span className="organ-icon">🔊</span>
                     <span className="organ-label">TUNE</span>
                 </div>
 
-                <div className="organ-node organ-flux" style={{ left: '50%', top: '80%' }} onClick={() => onSelectToy('genre_flux')}>
+                {/* 3. Flux (Genre Flux) */}
+                <div className="organ-node organ-flux" style={{ left: '70%', top: '70%' }} onClick={() => onSelectToy('genre_flux')}>
                     <span className="organ-icon">🌀</span>
                     <span className="organ-label">FLUX</span>
                 </div>
 
-                <div className="organ-node organ-coil" style={{ left: '80%', top: '75%' }} onClick={() => onSelectToy('ancestors_coil')}>
+                {/* 4. Coil (Ancestors) */}
+                <div className="organ-node organ-coil" style={{ left: '60%', top: '25%' }} onClick={() => onSelectToy('ancestors_coil')}>
                     <span className="organ-icon">🧬</span>
                     <span className="organ-label">COIL</span>
                 </div>
 
-                <div className="organ-node organ-chronicle" style={{ left: '35%', top: '65%' }} onClick={() => onSelectToy('chronicle_view')}>
+                {/* 5. Records (Chronicle) */}
+                <div className="organ-node organ-chronicle" style={{ left: '20%', top: '55%' }} onClick={() => onSelectToy('chronicle_view')}>
                     <span className="organ-icon">📖</span>
                     <span className="organ-label">RECORDS</span>
                 </div>

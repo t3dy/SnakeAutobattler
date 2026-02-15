@@ -11,7 +11,7 @@ interface ArenaProps {
 
 const Arena: React.FC<ArenaProps> = ({ world, events, currentTick, snakes, params }) => {
     const isV5 = params?.mode !== undefined;
-    const isV8 = params?.version === 'v8.0';
+    const isV8 = params?.version === 'v8.0' || params?.version === 'v10.0' || params?.version === 'v11.0' || params?.version === 'v12.0' || params?.version === 'v13.0';
 
     const grid = useMemo(() => {
         // ... (existing grid calculation logic - I will keep it but filter emojis if V8)
@@ -84,7 +84,9 @@ const Arena: React.FC<ArenaProps> = ({ world, events, currentTick, snakes, param
                 .filter(e => e.snakeId === snake.id && e.tick <= currentTick && (e.type === 'MOVE' || e.type === 'ENTER_TILE'))
                 .map(e => e.pos);
             const isAlive = !events.filter(e => e.snakeId === snake.id && e.tick <= currentTick).some(e => e.type === 'KO');
-            return { id: snake.id, team: snake.team, path: history, isAlive, color: snake.team === 'player' ? '#00ff7f' : '#ff4444' };
+            // v13.1 Visual Feedback: Damage check
+            const isDamaged = snake.lastDamageTick && (currentTick - snake.lastDamageTick < 5);
+            return { id: snake.id, team: snake.team, path: history, isAlive, color: snake.team === 'player' ? '#00ff7f' : '#ff4444', isDamaged };
         });
     }, [snakes, events, currentTick, isV8]);
 
@@ -138,10 +140,11 @@ const Arena: React.FC<ArenaProps> = ({ world, events, currentTick, snakes, param
                                 points={s.path.map(p => `${p.x * 40 + 20},${p.y * 40 + 20}`).join(' ')}
                                 fill="none"
                                 stroke={s.color}
-                                strokeWidth="8"
+                                strokeWidth={s.isDamaged ? "12" : "8"} // Thicker stroke on damage
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
-                                style={{ transition: 'all 0.3s ease' }}
+                                className={s.isDamaged ? "snake-node damage" : "snake-node"}
+                                style={{ transition: 'all 0.1s ease', filter: s.isDamaged ? 'brightness(2) sepia(1)' : 'none' }}
                             />
                         ))}
                     </svg>

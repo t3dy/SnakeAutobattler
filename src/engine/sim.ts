@@ -529,9 +529,11 @@ export class Simulation {
             if (isSlapstick) {
                 damage = 2;
                 this.applyKnockback(defender, attacker);
+                defender.lastDamageTick = this.tick; // v13.1 Visual Feedback
                 this.emit(defender, 'DAMAGE', defender.pos, this.world[defender.pos.y][defender.pos.x].terrain, ['BONK!', 'Comical Knockback']);
             } else {
                 defender.hp -= damage;
+                defender.lastDamageTick = this.tick; // v13.1 Visual Feedback
                 this.emit(defender, 'DAMAGE', defender.pos, this.world[defender.pos.y][defender.pos.x].terrain, [damage.toString(), isZombie ? 'Infected Bite!' : 'Bite']);
             }
 

@@ -13,6 +13,7 @@ import ResonanceTuner from './components/ResonanceTuner';
 import GenreFlux from './components/GenreFlux';
 import AncestorsCoil from './components/AncestorsCoil';
 import ChronicleView from './components/ChronicleView';
+import RadianceDisplay from './components/RadianceDisplay'; // v13.1 Recovery
 import { DESIGNERS } from './engine/designers';
 import { generateSimulation } from './engine/sim'
 import { generateNarrative } from './engine/narrate'
@@ -72,9 +73,8 @@ function App() {
 
     const selectVersion = (v: EngineVersion) => {
         setEngineVersion(v)
-        if (v === 'v12.0') {
-            setGameState('mode_select')
-        } else if (v === 'v10.0' || v === 'v11.0') {
+        // v13.1: Lucid Loop Recovery - Explicit Routing
+        if (v === 'v13.0' || v === 'v12.0' || v === 'v10.0' || v === 'v11.0') {
             setGameState('mode_select')
         } else if (v === 'v5.0' || v === 'v6.0' || v === 'v7.0' || v === 'v8.0') {
             setGameState('mode_select')
@@ -87,7 +87,8 @@ function App() {
 
     const handleModePick = (mode: any) => {
         handleEnvPick('mode', mode);
-        if (engineVersion === 'v12.0') {
+        // v13.1: Lucid Loop Recovery - Restore Genre Agency
+        if (engineVersion === 'v13.0' || engineVersion === 'v12.0') {
             setGameState('genre_select');
         } else if (engineVersion === 'v10.0' || engineVersion === 'v11.0') {
             setGameState('draft_order_select');
@@ -262,18 +263,16 @@ function App() {
     }, [isPlaying])
 
     const versions = [
-        { id: 'v1.0', title: 'PRIMAL LOGS', desc: 'The core simulation loop. Pure functional movement and terminal event tracing.' },
-        { id: 'v2.0', title: 'IDENTITY SPARK', desc: 'Drafting System. Snakes gain Traits, Quirks, and Origin Bios.' },
-        { id: 'v3.0', title: 'GIFT OF SIGHT', desc: 'Visual Replays. Emoji Arena and real-time combat visualization.' },
-        { id: 'v4.0', title: 'SAGA ENGINE', desc: 'Story Compiler. Events grouped into dramatic arcs (Exploration, Conflict).' },
-        { id: 'v5.0', title: 'HONOR & STEEL', desc: 'Themes & Hot-Seat. Introduces the Storm mechanic and Dual Styles.' },
-        { id: 'v6.0', title: 'THE MERCHANT', desc: 'Interrupted loop. Manual tactics: Run, Hide, or Fight.' },
-        { id: 'v7.0', title: 'THE GHOST', desc: 'Surgical causality. Autonomous Resolve based on personality.' },
-        { id: 'v8.0', title: 'CHRONICLE', desc: 'Visual Synthesis. Cinematic camera, SVG morphing, and weather.' },
-        { id: 'v10.0', title: 'EXPEDITION', desc: 'The Grand Expedition. 2-Phase journeys, Brave Deeds, and Cinematic Videos.' },
-        { id: 'v11.0', title: 'FIELDS', desc: 'The Living Field. Scalar fields, noise-based generation, and Treasure Mode.' },
-        { id: 'v12.0', title: 'MULTI-VERSE', desc: 'The Multi-Verse. 5 Narrative Genres with distinct mechanics and prose.' },
-        { id: 'v13.0', title: 'ARCHITECT', desc: 'The Radiant Architect. Meta-agentic design, encounter-driven drama, and systemic resonance.' }
+        { id: 'v1.0', title: 'The Primordial Coil', desc: 'Basic movement and apple consumption.' },
+        { id: 'v4.0', title: 'The Elemental Shedding', desc: 'Introduction of hazard biomes.' },
+        { id: 'v7.0', title: 'The Genetic Split', desc: 'Unit classes and synergistic evolutions.' },
+        { id: 'v8.0', title: 'The Cinematic Eye', desc: 'Visual overhaul and automated camera direction.' },
+        { id: 'v10.0', title: 'The Resonance', desc: 'Deep simulation and metadata tracking.' },
+        { id: 'v11.0', title: 'The Scalar Field', desc: 'Terrain interactions and procedural generation.' },
+        { id: 'v12.0', title: 'The Genre Shift', desc: 'Narrative genres and creative direction.' },
+        { id: 'v13.0', title: 'The Radiant Architect', desc: 'Encounter-driven drama and tool-assisted design.' },
+        { id: 'v13.1', title: 'The Lucid Loop', desc: 'Refined navigation and visual feedback.' },
+        { id: 'v13.2', title: 'The Narrative Weave', desc: 'Context-aware storytelling and orphanage detection.' }
     ];
 
     const VersionCard = ({ id, title }: { id: string, title: string }) => (
@@ -404,6 +403,11 @@ function App() {
                             {currentDraft.body && currentDraft.instinct && currentDraft.affinity && !currentDraft.quirk && <CategoryBox title="QUIRK" options={QUIRKS} onSelect={(val: any) => handlePick('quirk', val)} />}
                         </div>
                     </div>
+                )}
+
+                {/* v13.1 Lucid Loop: Radiance HUD */}
+                {activeSim && (gameState === 'battle' || gameState === 'cinematic_video') && (
+                    <RadianceDisplay radiance={activeSim.radiance} />
                 )}
 
                 {gameState === 'battle' && (

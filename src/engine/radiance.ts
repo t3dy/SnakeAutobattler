@@ -42,6 +42,10 @@ export class RadianceEngine {
         this.currentValue = initialValue;
     }
 
+    get value(): number {
+        return this.currentValue;
+    }
+
     // THE FORMULA
     // Radiance is not random. It is a sum of Brave Deeds vs. Entropic Failures.
     update(events: GameEvent[], snakes: SnakeState[]): number {

@@ -114,6 +114,7 @@ export interface SnakeState {
     scavengeProfit: number;
     storyHistory: string[];
     skills: string[];
+    lastDamageTick?: number; // v13.1 Visual Feedback
 }
 
 export type EventType =
