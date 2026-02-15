@@ -676,6 +676,138 @@ h1 {
     margin-top: 0.5rem;
 }
 
+/* Cinematic Video Styles */
+.cinematic-stage {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-viewport {
+    width: 90%;
+    height: 70%;
+    border: 10px solid #222;
+    position: relative;
+    overflow: hidden;
+    background: radial-gradient(circle, #1a1a1a 0%, #000 100%);
+}
+
+.animation-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cinematic-snake {
+    width: 300px;
+    height: 150px;
+    filter: drop-shadow(0 0 10px currentColor);
+}
+
+/* SFX Animations */
+.visual-sfx {
+    position: absolute;
+    font-weight: 900;
+    font-size: 4rem;
+    color: #fff;
+    text-shadow: 0 0 20px #ff0055, 4px 4px 0 #000;
+    opacity: 0;
+    transform: scale(0.5) rotate(-10deg);
+}
+
+.step-0,
+.step-1,
+.step-2 {
+    opacity: 1;
+    animation: sfxPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes sfxPop {
+    0% {
+        transform: scale(0.1) rotate(20deg);
+        opacity: 0;
+    }
+
+    70% {
+        transform: scale(1.2) rotate(-10deg);
+    }
+
+    100% {
+        transform: scale(1) rotate(-5deg);
+        opacity: 1;
+    }
+}
+
+.animation-container.run .cinematic-snake {
+    animation: snakeRun 0.5s infinite alternate;
+}
+
+@keyframes snakeRun {
+    from {
+        transform: translateX(-20px) skewX(10deg);
+    }
+
+    to {
+        transform: translateX(20px) skewX(-10deg);
+    }
+}
+
+.animation-container.fight .actor-container {
+    animation: screenShake 0.1s infinite;
+}
+
+@keyframes screenShake {
+    0% {
+        transform: translate(1px, 1px);
+    }
+
+    50% {
+        transform: translate(-1px, -2px);
+    }
+
+    100% {
+        transform: translate(1px, 1px);
+    }
+}
+
+.video-controls {
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    text-align: center;
+    color: #ffd700;
+    font-weight: bold;
+    letter-spacing: 2px;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    50% {
+        opacity: 0.3;
+    }
+}
+
+/* Theme Varients */
+.scifi .video-viewport {
+    border-color: #00ff7f;
+    box-shadow: inset 0 0 50px rgba(0, 255, 127, 0.2);
+}
+
+.medieval .video-viewport {
+    border-color: #8b4513;
+    background-image: url('https://www.transparenttextures.com/patterns/old-paper.png');
+}
+
 .trait-desc {
     font-size: 0.75rem;
     opacity: 0.8;
@@ -800,4 +932,442 @@ button:hover {
     margin-top: 20px;
     font-size: 0.7rem;
     opacity: 0.8;
+}
+
+/* Radiant Toy Layout */
+.radiant-toy {
+    background: #000;
+    color: #33ff33;
+    padding: 20px;
+    border: 4px solid #33ff33;
+    min-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.toy-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #33ff33;
+    margin-bottom: 20px;
+}
+
+.toy-layout {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 20px;
+}
+
+.trait-list {
+    border-right: 2px solid #33ff33;
+    padding-right: 15px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.trait-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 1px solid #33ff33;
+    color: #33ff33;
+    margin-bottom: 8px;
+    padding: 10px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.trait-btn.active {
+    background: #33ff33;
+    color: #000;
+}
+
+.toy-lab {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.lab-controls {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.audit-badge {
+    padding: 5px 10px;
+    border: 1px solid #33ff33;
+    font-size: 0.8em;
+}
+
+.lab-output {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.output-box {
+    border: 1px solid #33ff33;
+    padding: 15px;
+    background: #111;
+}
+
+.output-box h4 {
+    margin-top: 0;
+    border-bottom: 1px solid #33ff33;
+    padding-bottom: 5px;
+}
+
+.output-box pre,
+.output-box p {
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+}
+
+.lab-patch textarea {
+    width: 100%;
+    height: 100px;
+    background: #000;
+    color: #33ff33;
+    border: 1px solid #33ff33;
+    padding: 10px;
+    font-family: inherit;
+    margin-bottom: 10px;
+    resize: vertical;
+}
+
+/* Hall of Designers Styles */
+.hall-of-designers {
+    background: #050505;
+    color: #33ff33;
+    padding: 30px;
+    border: 4px double #33ff33;
+    min-height: 90vh;
+    text-align: left;
+    overflow-y: auto;
+}
+
+.hall-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #33ff33;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.hall-intro {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-bottom: 30px;
+    max-width: 800px;
+    color: #00ff7f;
+}
+
+.designer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.designer-card {
+    background: #111;
+    border: 1px solid #33ff33;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.designer-card:hover {
+    transform: translateY(-5px);
+    background: #1a1a1a;
+    border-color: #00ff7f;
+}
+
+.designer-top {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.designer-emoji {
+    font-size: 2.5rem;
+}
+
+.designer-names {
+    display: flex;
+    flex-direction: column;
+}
+
+.designer-name {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #fff;
+}
+
+.designer-role {
+    font-size: 0.8rem;
+    color: #00ff7f;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.designer-purview,
+.designer-tech {
+    font-size: 0.75rem;
+    color: #ccc;
+}
+
+.designer-purview strong,
+.designer-tech strong {
+    color: #33ff33;
+}
+
+.designer-desc {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    margin: 0;
+}
+
+.designer-quote {
+    margin-top: auto;
+    font-size: 0.8rem;
+    color: #888;
+    border-left: 2px solid #33ff33;
+    padding-left: 10px;
+}
+
+.hall-footer {
+    margin-top: 40px;
+    text-align: center;
+    border-top: 1px solid #33ff33;
+    padding-top: 20px;
+    font-size: 0.8rem;
+}
+
+.designer-entry-btn {
+    border-color: #00ff7f;
+    color: #00ff7f;
+}
+
+.lab-designer-insight {
+    border-top: 1px solid #33ff33;
+    padding-top: 15px;
+    margin-top: 10px;
+}
+
+.insight-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.insight-card {
+    background: #050505;
+    border: 1px solid #00ff7f;
+    padding: 10px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.75rem;
+}
+
+.insight-emoji {
+    font-size: 1.5rem;
+}
+
+.insight-content p {
+    margin: 5px 0 0;
+    font-style: italic;
+    color: #00ff7f;
+}
+
+/* RADIANT TOYS v13.0 */
+.radiant-toy {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90vw;
+    height: 90vh;
+    background: rgba(10, 10, 15, 0.98);
+    border: 2px solid #00ff7f;
+    box-shadow: 0 0 50px rgba(0, 255, 127, 0.3);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    padding: 2rem;
+    overflow: hidden;
+    color: #e0e0e0;
+}
+
+.toy-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid rgba(0, 255, 127, 0.5);
+    padding-bottom: 1rem;
+    margin-bottom: 2rem;
+}
+
+.toy-header h2 {
+    margin: 0;
+    color: #00ff7f;
+    text-shadow: 0 0 10px rgba(0, 255, 127, 0.5);
+}
+
+/* Resonance Tuner */
+.resonance-tuner .toy-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.score-display {
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-align: center;
+}
+
+.tuner-output {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.output-box {
+    background: rgba(20, 20, 30, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1.5rem;
+    border-radius: 8px;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.glitch-border {
+    border-color: #ff3333;
+    animation: pulse-red 1s infinite alternate;
+}
+
+@keyframes pulse-red {
+    from {
+        box-shadow: 0 0 10px rgba(255, 51, 51, 0.2);
+    }
+
+    to {
+        box-shadow: 0 0 25px rgba(255, 51, 51, 0.5);
+    }
+}
+
+/* Genre Flux */
+.flux-controls {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.flux-controls button {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 0.8rem 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.flux-controls button.active {
+    background: #00ff7f;
+    color: #000;
+    font-weight: bold;
+    box-shadow: 0 0 20px rgba(0, 255, 127, 0.5);
+}
+
+.theatre-screen {
+    background: #000;
+    padding: 2rem;
+    border: 5px solid #222;
+    min-height: 200px;
+    margin-bottom: 1rem;
+    overflow-y: auto;
+}
+
+/* Ancestors Coil */
+.genealogy-tree {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    overflow-y: auto;
+}
+
+.ancestor-node {
+    display: flex;
+    align-items: center;
+    background: rgba(30, 30, 45, 0.8);
+    border: 1px solid rgba(0, 255, 127, 0.3);
+    padding: 1rem 2rem;
+    width: 60%;
+    position: relative;
+    border-radius: 4px;
+}
+
+.node-version {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #00ff7f;
+    margin-right: 2rem;
+    opacity: 0.5;
+}
+
+.node-link {
+    font-size: 2rem;
+    color: #00ff7f;
+    margin: 5px 0;
+}
+
+.v13-architect-btn {
+    background: linear-gradient(135deg, #00ff7f 0%, #007bff 100%) !important;
+    border: 2px solid white !important;
+    animation: v13-pulse 2s infinite;
+}
+
+@keyframes v13-pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0px #00ff7f;
+    }
+
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 20px #00ff7f;
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0px #00ff7f;
+    }
+}
+
+.megaman-card.new-toy {
+    border-color: #00d2ff;
+    color: #00d2ff;
+}
+
+.megaman-card.new-toy:hover {
+    box-shadow: 0 0 20px #00d2ff;
 }

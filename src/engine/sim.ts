@@ -1,21 +1,28 @@
 import {
-    SnakeState, GameEvent, Cell, Stats, EventType, EnvironmentParams, NarrativeFlag, TerrainType, ResolveOutcome, CauseType
+    SnakeState, GameEvent, Cell, Stats, EventType, EnvironmentParams, NarrativeFlag, TerrainType, ResolveOutcome, CauseType, SnakeDraft
 } from './types';
 import { BODIES, INSTINCTS, AFFINITIES, QUIRKS } from './traits';
+import { generateNarrative } from './narrate';
+import { RadianceEngine } from './radiance';
 
 export class Simulation {
-    world: Cell[][];
+    world: Cell[][]; // Changed from `World` to `Cell[][]` to match original type, as `World` was not defined.
     snakes: SnakeState[];
     events: GameEvent[] = [];
     tick: number = 0;
     maxTicks: number = 60;
     envParams: EnvironmentParams;
     stormLevel: number = 0;
+    radianceScore: number = 100; // v13.0 Meta-Metric
+    synergyTags: string[] = [];  // v13.0 Active Synergies
+    currentEncounterData: any = null; // v13.0 Drama Data
+    radiance: RadianceEngine; // v13.0 Verifiable Metric
 
     constructor(world: Cell[][], snakes: SnakeState[], envParams: EnvironmentParams) {
         this.world = world;
         this.snakes = snakes;
         this.envParams = envParams;
+        this.radiance = new RadianceEngine();
     }
 
     isWaitingForChoice: boolean = false;
@@ -57,9 +64,36 @@ export class Simulation {
         }
 
         if (!this.isWaitingForChoice) {
-            this.resolveCombat();
+            this.handleCombat();
+
+            // v13.0 Verifiable Radiance Update
+            // Must run every tick to audit all events (Combat, Movement, Hazards)
+            this.radiance.update(this.events.filter(e => e.tick === this.tick), this.snakes);
         }
     }
+
+    // updateRadiance() { // Removed as per instruction
+    //     // v13.0: Calculate systemic drift. 
+    //     // Drift occurs if many snakes are alive but none are eating or fighting, 
+    //     // or if traits are triggered but have no narrative impact (simulated).
+    //     let delta = 0;
+    //     const activeSnakes = this.snakes.filter(s => s.alive);
+
+    //     // Reward action, penalize stagnation
+    //     const totalActivity = activeSnakes.reduce((acc, s) => acc + s.flags.length, 0);
+    //     if (totalActivity === 0) delta -= 1;
+    //     else delta += 0.5;
+
+    //     // Synergy Bonus
+    //     if (this.synergyTags.length > 0) delta += 1;
+
+    //     this.radianceScore = Math.max(0, Math.min(200, this.radianceScore + delta));
+
+    //     // Registry of 100 Improvements (Systemic representative)
+    //     if (this.tick % 10 === 0 && this.radianceScore > 150) {
+    //         this.emitGlobal('SYSTEM_RESONANCE', { x: 8, y: 8 }, 'forest', ['RESONANT_FLUX', 'v13_decadal_boost']);
+    //     }
+    // }
 
     applyBroodBonds(snakes: SnakeState[]) {
         snakes.forEach(s1 => {
@@ -94,6 +128,13 @@ export class Simulation {
     }
 
     advanceStorm() {
+        // Update Radiance Contract (Simulated Harmony)
+        this.radiance.update(this.events.filter(e => e.tick === this.tick), this.snakes); // Used this.tick instead of this.currentTick
+
+        // The following lines were part of the instruction but seem misplaced in advanceStorm and are commented out.
+        // this.currentTick++;
+        // return { events: this.events.slice(startEventCount) };
+
         this.stormLevel++;
         const width = this.world[0].length;
         const height = this.world.length;
@@ -113,13 +154,38 @@ export class Simulation {
     }
 
     updateSnake(snake: SnakeState, isClash: boolean) {
+        this.applyFields(snake);
+        this.applyGenreEffects(snake);
+        this.applyBodyTraits(snake);
+
         this.updateFlags(snake);
         const options = this.perceive(snake);
         const move = this.decideMove(snake, options, isClash);
 
         if (move) {
+            // v13.0 TripChance Check
+            if (snake.currentStats.speed > 3 && (Math.random() < 0.1)) {
+                this.emit(snake, 'SYSTEM_RESONANCE', move, this.world[move.y][move.x].terrain, ['TRIP_CHANCE', 'Slide Whistle!']);
+                snake.hp -= 5;
+            }
+
             snake.pos = move;
             const cell = this.world[move.y][move.x];
+
+            // Environmental SFX triggers
+            if (cell.terrain === 'forest') this.emit(snake, 'SYSTEM_RESONANCE', move, cell.terrain, ['LEAF_BURST']);
+            if (cell.terrain === 'desert') this.emit(snake, 'SYSTEM_RESONANCE', move, cell.terrain, ['SAND_SLIP']);
+            if (cell.terrain === 'mountain') this.emit(snake, 'SYSTEM_RESONANCE', move, cell.terrain, ['PEBBLE_PING']);
+            if (cell.terrain === 'river') this.emit(snake, 'SYSTEM_RESONANCE', move, cell.terrain, ['SPLASH_SKID']);
+
+            // Personality Glows
+            if (snake.hp > 80) this.emit(snake, 'SYSTEM_RESONANCE', move, cell.terrain, ['BLUSH_GLOW']);
+            if (snake.hp < 30) this.emit(snake, 'SYSTEM_RESONANCE', move, cell.terrain, ['SWEAT_DROP']);
+
+            // Digging Logic (Treasure Mode)
+            if (cell.treasure && (this.envParams.mode === 'TREASURE_EXPEDITION')) {
+                this.handleDigging(snake, cell);
+            }
 
             // v7.0 Storm Pressure tracking
             if (cell.hazard?.kind === '🌀') {
@@ -129,7 +195,7 @@ export class Simulation {
                     this.emit(snake, 'BEHAVIOR_SHIFT', snake.pos, cell.terrain, ['DESPERATE', 'Driven by the Storm']);
                 }
             } else {
-                snake.evolution['storm_ticks'] = 0; // Reset if outside immediately damaging storm
+                snake.evolution['storm_ticks'] = 0;
             }
 
             if (this.envParams.mode && Math.random() < 0.1 && !cell.food && !cell.hazard) {
@@ -151,12 +217,80 @@ export class Simulation {
         }
     }
 
-    triggerEncounter(snake: SnakeState, cell: Cell) {
-        // v7.0 Autonomous Resolve
-        const choice = this.calculateResolve(snake, cell);
+    applyFields(snake: SnakeState) {
+        const cell = this.world[snake.pos.y][snake.pos.x];
+        const { heat, moisture, elevation } = cell.fields;
 
-        this.emit(snake, 'ENCOUNTER_CHOICE', snake.pos, cell.terrain, [choice], undefined, undefined, 'NONE');
-        this.resolveEncounterChoice(snake, choice);
+        // Environmental Stat Modifiers
+        if (heat > 0.7) snake.currentStats.speed = Math.max(1, snake.baseStats.speed - 1);
+        if (moisture > 0.7) snake.currentStats.agility = Math.max(1, snake.baseStats.agility - 1);
+        if (elevation > 0.8) snake.currentStats.camouflage = snake.baseStats.camouflage + 2;
+    }
+
+    applyGenreEffects(snake: SnakeState) {
+        const genre = this.envParams.genre;
+        if (genre === 'ZOMBIE') {
+            if (this.tick % 10 === 0) snake.hp -= 2; // Constant decay
+        }
+        if (genre === 'SLAPSTICK' && Math.random() < 0.05) {
+            this.emit(snake, 'FEAT_ACCOMPLISHED', snake.pos, this.world[snake.pos.y][snake.pos.x].terrain, ['SLIP_UP', 'Comical Slide!']);
+            // Forced movement logic would go here
+        }
+    }
+
+    applyBodyTraits(snake: SnakeState) {
+        const bodyFlags = BODIES[snake.draft.body].flags;
+        const cell = this.world[snake.pos.y][snake.pos.x];
+
+        // Radiant Trait Sync: Boulderback Constrictor, Shadow Striker, Dune Sprinter, River Glider, Clockwork Coil
+
+        if (bodyFlags.includes('ambush_from_cover')) {
+            if (cell.fields.elevation > 0.6 || cell.terrain === 'forest') {
+                if (!snake.statuses.includes('AMBUSH_READY')) {
+                    snake.statuses.push('AMBUSH_READY');
+                    this.emit(snake, 'BEHAVIOR_SHIFT', snake.pos, cell.terrain, ['AMBUSH_READY', 'Coiled in Shadows']);
+                }
+            } else {
+                snake.statuses = snake.statuses.filter(s => s !== 'AMBUSH_READY');
+            }
+        }
+    }
+    handleDigging(snake: SnakeState, cell: Cell) {
+        if (!cell.treasure) return;
+        const digSpeed = 0.1 * (snake.currentStats.size / 5);
+        cell.treasure.depth -= digSpeed;
+
+        if (cell.treasure.depth <= 0) {
+            const treasure = cell.treasure;
+            this.emit(snake, 'FEAT_ACCOMPLISHED', snake.pos, cell.terrain, ['TREASURE_EXCAVATED', treasure.name]);
+            if (treasure.item) {
+                snake.inventory.push(treasure.item.name);
+                if (treasure.item.traitBonus) {
+                    Object.entries(treasure.item.traitBonus).forEach(([stat, val]) => {
+                        (snake.baseStats as any)[stat] += val;
+                    });
+                }
+            }
+            cell.treasure = null;
+        } else {
+            this.emit(snake, 'MOVE', snake.pos, cell.terrain, ['DIGGING', `${Math.round(cell.treasure.depth * 100)}% left`]);
+        }
+    }
+
+    triggerEncounter(snake: SnakeState, cell: Cell) {
+        this.isWaitingForChoice = true;
+
+        // Pack Encounter Metadata for the Cinematic
+        this.currentEncounterData = {
+            snakeId: snake.id,
+            threatType: cell.hazard ? 'HAZARD' : cell.treasure ? 'TREASURE' : 'MYSTERY',
+            threatIntensity: cell.hazard ? cell.hazard.damage : 50,
+            terrainContext: cell.terrain,
+            hazardModifiers: cell.hazard ? [cell.hazard.kind] : [],
+            resolutionFormula: "Success = f(Speed, Stealth, HP)"
+        };
+
+        this.pendingChoiceEvent = this.emit(snake, 'PENDING_CHOICE', snake.pos, cell.terrain, ['drama_staged', JSON.stringify(this.currentEncounterData)]);
     }
 
     calculateResolve(snake: SnakeState, cell: Cell): ResolveOutcome {
@@ -164,16 +298,30 @@ export class Simulation {
         const quirk = snake.draft.quirk;
         const instinct = snake.draft.instinct;
 
-        if (quirk === 'Reckless' || instinct === 'Aggressive') {
+        if (quirk === 'Reckless' || instinct === 'Hunter') { // Fixed Aggressive to Hunter
             if (hpPerc > 0.3) return 'FIGHT';
             return Math.random() > 0.5 ? 'FIGHT' : 'HIDE';
         }
 
-        if (quirk === 'Cunning' || hpPerc < 0.4) {
+        if (quirk === 'Cautious' || hpPerc < 0.4) { // Fixed Cunning to Cautious
             return 'HIDE';
         }
 
         return 'RUN';
+    }
+
+    calculateSuccessChance(choice: ResolveOutcome, snake: SnakeState, cell: Cell): number {
+        const stats = snake.currentStats;
+        let base = 50;
+
+        if (choice === 'RUN') base += stats.speed * 10;
+        if (choice === 'HIDE') base += stats.camouflage * 10;
+        if (choice === 'FIGHT') base += (stats.venom + stats.size) * 5;
+
+        // Health modifier
+        base *= (snake.hp / snake.maxHp);
+
+        return Math.max(5, Math.min(95, base));
     }
 
     resolveEncounterChoice(snake: SnakeState, choice: 'RUN' | 'HIDE' | 'FIGHT') {
@@ -189,6 +337,10 @@ export class Simulation {
             if (roll > 15) {
                 outcome = theme === 'SCIFI' ? 'Stealth protocols held. The threat passed over.' : 'Shadows became his armor; the danger did not see him.';
                 this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['STAY_HIDDEN', outcome]);
+                if (this.envParams.version === 'v10.0' && Math.random() < 0.3) {
+                    const skill = 'Shadow Blend';
+                    if (!snake.skills.includes(skill)) snake.skills.push(skill);
+                }
             } else {
                 outcome = theme === 'SCIFI' ? 'Cloaking failed! Forced into an immediate engagement.' : 'The stones rolled under his weight, revealing his presence!';
                 snake.hp -= 20;
@@ -202,6 +354,12 @@ export class Simulation {
                 snake.scavengeProfit += 100;
                 outcome = theme === 'SCIFI' ? 'Core Overload victory! Salvaged high-tier hardware.' : 'A roar echoed in the glade. The foe was vanquished, its gold claimed.';
                 this.emit(snake, 'ENCOUNTER_RESULT', snake.pos, cell.terrain, ['VICTORY', outcome]);
+
+                if (this.envParams.version === 'v10.0') {
+                    const skills = ['Venom Spit', 'Crushing Coil', 'Sharp Fangs'];
+                    const skill = skills[Math.floor(Math.random() * skills.length)];
+                    if (!snake.skills.includes(skill)) snake.skills.push(skill);
+                }
             } else {
                 snake.hp -= 30;
                 outcome = theme === 'SCIFI' ? 'Hardware damage sustained. Retreating with sub-optimal data.' : 'The battle was a calamity. He crawled away, broken and shamed.';
@@ -265,6 +423,24 @@ export class Simulation {
 
         const goalBias = isClash ? 'seeks_enemy' : bias;
 
+        // Radiant Trait: Territorial Patrol
+        if (goalBias === 'claims_region') {
+            const home = snake.evolution['home_pos'] ? { x: snake.evolution['home_pos_x'], y: snake.evolution['home_pos_y'] } : null;
+            if (!home) {
+                snake.evolution['home_pos_x'] = snake.pos.x;
+                snake.evolution['home_pos_y'] = snake.pos.y;
+            } else {
+                const distToHome = Math.abs(snake.pos.x - home.x) + Math.abs(snake.pos.y - home.y);
+                if (distToHome > 3) {
+                    return validOptions.sort((a, b) => {
+                        const dA = Math.abs(a.x - home.x) + Math.abs(a.y - home.y);
+                        const dB = Math.abs(b.x - home.x) + Math.abs(b.y - home.y);
+                        return dA - dB;
+                    })[0];
+                }
+            }
+        }
+
         if (goalBias === 'seeks_food' || snake.hp < 50) {
             const memoryFood = snake.memory.food.find(f => validOptions.some(o => o.x === f.x && o.y === f.y));
             if (memoryFood) return memoryFood;
@@ -297,6 +473,12 @@ export class Simulation {
     handleHazard(snake: SnakeState, cell: Cell) {
         if (!cell.hazard) return;
         let damage = cell.hazard.damage;
+
+        // Radiant Trait: Boulderback Resistance
+        if (BODIES[snake.draft.body].flags.includes('hazard_resist')) {
+            damage = Math.floor(damage * 0.5);
+        }
+
         if (snake.draft.quirk === 'Reckless') damage *= 1.5;
         snake.hp -= damage;
 
@@ -314,7 +496,7 @@ export class Simulation {
         }
     }
 
-    resolveCombat() {
+    handleCombat() {
         const pairs: [SnakeState, SnakeState][] = [];
         this.snakes.filter(s => s.alive).forEach(s1 => {
             this.snakes.filter(s => s.alive && s.team !== s1.team).forEach(s2 => {
@@ -325,36 +507,50 @@ export class Simulation {
                 }
             });
         });
-        pairs.forEach(([s1, s2]) => this.dramaticFight(s1, s2));
+        pairs.forEach(([s1, s2]) => this.resolveCombat(s1, s2));
     }
 
-    dramaticFight(s1: SnakeState, s2: SnakeState) {
-        const cell = this.world[s1.pos.y][s1.pos.x];
-        this.emit(s1, 'COMBAT_START', s1.pos, cell.terrain, [`vs_${s2.name}`], undefined, s2.id, 'COMBAT');
-        const dmg1 = this.calcDmg(s1, s2);
-        const dmg2 = this.calcDmg(s2, s1);
-        s2.hp -= dmg1;
-        s1.hp -= dmg2;
-        this.emit(s1, 'COMBAT_EXCHANGE', s1.pos, cell.terrain, ['exchange_1'], dmg1, s2.id, 'COMBAT');
+    resolveCombat(s1: SnakeState, s2: SnakeState) {
+        const genre = this.envParams.genre;
+        const isSlapstick = genre === 'SLAPSTICK';
+        const isZombie = genre === 'ZOMBIE';
 
-        if (s1.hp <= 0 && s1.alive) {
-            s1.alive = false;
-            this.emit(s1, 'KO', s1.pos, cell.terrain, [`slain_by_${s2.name}`], undefined, s2.id, 'COMBAT');
-            s2.flags.push('DOMINANT');
-        }
-        if (s2.hp <= 0 && s2.alive) {
-            s2.alive = false;
-            this.emit(s2, 'KO', s2.pos, cell.terrain, [`slain_by_${s1.name}`], undefined, s1.id, 'COMBAT');
-            s1.flags.push('DOMINANT');
-        }
-        if (s1.alive && s2.alive) {
-            this.emit(s1, 'COMBAT_END', s1.pos, cell.terrain, ['stalemate'], undefined, s2.id, 'COMBAT');
-        }
+        // Simultaneous or sequential? Let's go sequential for now
+        const fight = (attacker: SnakeState, defender: SnakeState) => {
+            let damage = Math.max(2, attacker.currentStats.venom + attacker.currentStats.size - defender.currentStats.agility);
+
+            // Radiant Trait: Shadow Striker Alpha Strike
+            if (attacker.statuses.includes('AMBUSH_READY')) {
+                damage *= 2;
+                attacker.statuses = attacker.statuses.filter(s => s !== 'AMBUSH_READY');
+                this.emit(attacker, 'FEAT_ACCOMPLISHED', attacker.pos, this.world[attacker.pos.y][attacker.pos.x].terrain, ['ALPHA_STRIKE', 'Lethal Ambush']);
+            }
+
+            if (isSlapstick) {
+                damage = 2;
+                this.applyKnockback(defender, attacker);
+                this.emit(defender, 'DAMAGE', defender.pos, this.world[defender.pos.y][defender.pos.x].terrain, ['BONK!', 'Comical Knockback']);
+            } else {
+                defender.hp -= damage;
+                this.emit(defender, 'DAMAGE', defender.pos, this.world[defender.pos.y][defender.pos.x].terrain, [damage.toString(), isZombie ? 'Infected Bite!' : 'Bite']);
+            }
+
+            if (defender.hp <= 0) {
+                defender.alive = false;
+                this.emit(defender, 'KO', defender.pos, this.world[defender.pos.y][defender.pos.x].terrain, [genre]);
+            }
+        };
+
+        fight(s1, s2);
+        if (s2.alive) fight(s2, s1);
     }
 
-    calcDmg(attacker: SnakeState, defender: SnakeState) {
-        let dmg = attacker.currentStats.venom + attacker.currentStats.size;
-        return Math.max(2, dmg + Math.floor(Math.random() * 5));
+    applyKnockback(target: SnakeState, attacker: SnakeState) {
+        const dx = target.pos.x - attacker.pos.x;
+        const dy = target.pos.y - attacker.pos.y;
+        const nx = Math.max(0, Math.min(this.world[0].length - 1, target.pos.x + dx));
+        const ny = Math.max(0, Math.min(this.world.length - 1, target.pos.y + dy));
+        target.pos = { x: nx, y: ny };
     }
 
     checkCascade(snake: SnakeState) {
@@ -408,5 +604,57 @@ export class Simulation {
                 flags: []
             }
         });
+    }
+}
+
+import { generateWorld } from './world';
+
+export function generateSimulation(playerDrafts: SnakeDraft[], enemyDrafts: SnakeDraft[], envParams: EnvironmentParams, p2Team: SnakeDraft[] = []) {
+    const world = generateWorld(envParams);
+    const snakes: SnakeState[] = [
+        ...playerDrafts.map((d, i) => createSnake(`Blue-${i}`, 'player', d, i)),
+        ...p2Team.map((d, i) => createSnake(`Green-${i}`, 'player', d, i + playerDrafts.length)),
+        ...enemyDrafts.map((d, i) => createSnake(`Red-${i}`, 'enemy', d, i))
+    ];
+
+    return new Simulation(world, snakes, envParams);
+}
+
+function createSnake(name: string, team: 'player' | 'enemy', draft: SnakeDraft, index: number): SnakeState {
+    const bodyStats = BODIES[draft.body].stats;
+    const affinityBonuses = AFFINITIES[draft.affinity].bonuses;
+    const quirkBonuses = QUIRKS[draft.quirk].bonuses;
+
+    const baseStats: Stats = {
+        speed: (bodyStats.speed || 0) + (affinityBonuses.speed || 0) + (quirkBonuses.speed || 0),
+        size: (bodyStats.size || 0) + (affinityBonuses.size || 0) + (quirkBonuses.size || 0),
+        venom: (bodyStats.venom || 0) + (affinityBonuses.venom || 0) + (quirkBonuses.venom || 0),
+        agility: (bodyStats.agility || 0) + (affinityBonuses.agility || 0) + (quirkBonuses.agility || 0),
+        camouflage: (bodyStats.camouflage || 0) + (affinityBonuses.camouflage || 0) + (quirkBonuses.camouflage || 0)
+    };
+
+    return {
+        id: `${team}-${index}-${Math.random().toString(36).substr(2, 5)}`,
+        name,
+        team,
+        hp: 100,
+        maxHp: 100,
+        pos: { x: index * 2 + 2, y: team === 'player' ? 2 : 10 },
+        draft,
+        baseStats,
+        currentStats: { ...baseStats },
+        aiState: 'searching',
+        alive: true,
+        inventory: [],
+        statuses: [],
+        flags: [],
+        memory: { hazards: [], food: [], enemies: [] },
+        evolution: {},
+        experience: 0,
+        honor: 0,
+        gear: [],
+        scavengeProfit: 0,
+        storyHistory: [],
+        skills: []
     }
 }

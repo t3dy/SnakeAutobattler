@@ -1,100 +1,92 @@
-import { Cell, TerrainType, EnvironmentParams } from './types';
+import { Cell, TerrainType, EnvironmentParams, Genre } from './types';
+import { generateNoiseField, sampleField } from './fields';
+import { GENRES } from './genres';
 
 export function generateWorld(
     params: EnvironmentParams = {
         climate: 'Standard', fauna: 'Standard', flora: 'Standard',
-        mode: 'SOLO', theme: 'MEDIEVAL'
+        mode: 'SOLO', theme: 'MEDIEVAL', phase: 1, genre: 'NOIR'
     },
     width: number = 16,
     height: number = 12
 ): Cell[][] {
     const world: Cell[][] = [];
-    const terrainTypes: TerrainType[] = ['forest', 'desert', 'river', 'mountain'];
+    const genreDef = GENRES[params.genre || 'NOIR'];
 
-    // Weighted generation based on Climate
-    const getWeightedTerrain = (): TerrainType => {
-        const weights: Record<TerrainType, number> = {
-            'forest': 1, 'desert': 1, 'river': 1, 'mountain': 1
-        };
+    // Phase 1: Generate Noise Fields
+    const heatField = generateNoiseField(width, height, 0.2);
+    const moistureField = generateNoiseField(width, height, 0.2);
+    const elevationField = generateNoiseField(width, height, 0.15);
+    const hazardDensityField = generateNoiseField(width, height, 0.3);
 
-        if (params.climate === 'Lush') {
-            weights.river = 4;
-            weights.forest = 3;
-            weights.desert = 0.5;
-        } else if (params.climate === 'Arid') {
-            weights.desert = 5;
-            weights.mountain = 2;
-            weights.river = 0.2;
-        } else if (params.climate === 'Binary') {
-            weights.mountain = 3;
-            weights.river = 0.5;
-            weights.forest = 0.5;
-            weights.desert = 2;
-        }
-
-        const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
-        let r = Math.random() * totalWeight;
-        for (const [t, w] of Object.entries(weights)) {
-            if (r < w) return t as TerrainType;
-            r -= w;
-        }
-        return 'forest';
-    };
-
-    // Pass 1: Weighted terrain
+    // Phase 2: Derive Terrain from Fields
     for (let y = 0; y < height; y++) {
         const row: Cell[] = [];
         for (let x = 0; x < width; x++) {
+            const heat = sampleField(heatField, x, y);
+            const moisture = sampleField(moistureField, x, y);
+            const elevation = sampleField(elevationField, x, y);
+            const hazardDensity = sampleField(hazardDensityField, x, y);
+
+            let terrain: TerrainType = 'forest';
+            if (elevation > 0.7) terrain = 'mountain';
+            else if (moisture > 0.7) terrain = 'river';
+            else if (heat > 0.6 && moisture < 0.3) terrain = 'desert';
+
             row.push({
-                terrain: getWeightedTerrain(),
+                x, y,
+                terrain,
                 food: null,
                 hazard: null,
-                x,
-                y
+                treasure: null,
+                fields: {
+                    heat,
+                    moisture,
+                    elevation,
+                    storm: 0
+                }
             });
         }
         world.push(row);
     }
 
-    // Pass 2: Smoothing
-    for (let i = 0; i < 3; i++) {
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                const neighbors = [];
-                if (y > 0) neighbors.push(world[y - 1][x].terrain);
-                if (y < height - 1) neighbors.push(world[y + 1][x].terrain);
-                if (x > 0) neighbors.push(world[y][x - 1].terrain);
-                if (x < width - 1) neighbors.push(world[y][x + 1].terrain);
-
-                const counts: Record<string, number> = {};
-                neighbors.forEach(t => counts[t] = (counts[t] || 0) + 1);
-                const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-                if (sorted.length > 0 && Math.random() > 0.4) {
-                    world[y][x].terrain = sorted[0][0] as TerrainType;
-                }
-            }
-        }
-    }
-
-    // Pass 3: Food & Hazards
-    const foodChance = params.fauna === 'Swarm' ? 0.08 : params.fauna === 'Sparse' ? 0.02 : 0.04;
-    const floraMod = params.flora === 'Dense' ? 1.5 : params.flora === 'None' ? 0.5 : 1.0;
+    // Phase 3: Populate Goods & Hazards (Genre-biased)
+    const foodRate = genreDef.specialRules.spawnFoodRate;
+    const hazardRate = genreDef.specialRules.spawnHazardRate;
+    const treasureRate = genreDef.specialRules.treasureRate;
 
     for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
             const cell = world[y][x];
-            let currentFoodChance = foodChance;
-            if (cell.terrain === 'forest') currentFoodChance *= floraMod;
+            const hazardDensity = sampleField(hazardDensityField, x, y);
 
-            if (Math.random() < currentFoodChance) {
+            // Food spawning
+            if (Math.random() < 0.05 * foodRate && !cell.hazard) {
                 cell.food = { kind: Math.random() > 0.5 ? '🍎' : '🐁', value: 15 };
-            } else if (Math.random() < 0.08) {
+            }
+
+            // Hazard spawning
+            if (Math.random() < 0.08 * hazardRate * hazardDensity && !cell.food) {
                 const hazards = [
                     { kind: '🪤', damage: 10 },
                     { kind: '🕳️', damage: 8 },
                     { kind: '🪨', damage: 12 }
                 ];
+                if (params.genre === 'SLAPSTICK') hazards.push({ kind: '🍌', damage: 5 }); // Banana peel
+                if (params.genre === 'SPY') hazards.push({ kind: '🚨', damage: 15 }); // Laser alarm
+
                 cell.hazard = hazards[Math.floor(Math.random() * hazards.length)];
+            }
+
+            // Treasure spawning (v11/v12 Exclusive)
+            if (Math.random() < 0.03 * treasureRate && !cell.food && !cell.hazard) {
+                cell.treasure = {
+                    id: `tr-${Math.random().toString(36).substr(2, 5)}`,
+                    type: Math.random() > 0.8 ? 'Artifact' : 'Relic',
+                    name: params.genre === 'NOIR' ? 'Lost File' : 'Golden Idol',
+                    depth: 0.3 + Math.random() * 0.7,
+                    value: 100
+                };
             }
         }
     }

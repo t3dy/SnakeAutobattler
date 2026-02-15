@@ -2,110 +2,152 @@ import {
     BodyType, InstinctType, AffinityType, QuirkType, Stats, TerrainType
 } from './types';
 
-export const BODIES: Record<BodyType, { stats: Partial<Stats>; flags: string[]; description: string; strategy: string }> = {
-    'Boulderback Constrictor': {
-        stats: { size: 3, speed: -2, agility: 0, venom: 0, camouflage: 0 },
-        flags: ['hazard_resist', 'close_quarters', 'avoids_open'],
-        description: "A massive powerhouse with overlapping, stone-like scales designed to withstand crushing pressure.",
-        strategy: "High survivability. Ideal for attrition warfare within mountainous or rocky biomes."
+export const BODIES: Record<BodyType, { stats: Partial<Stats>; flags: string[]; description: string; strategy: string; hints: { pro: string, con: string } }> = {
+    'Boulderback': {
+        stats: { size: 4, speed: -2, agility: 0, venom: 0, camouflage: 0 },
+        flags: ['high_defense', 'slow_turns'],
+        description: "A ponderous mass of reinforced scales that shrugs off all but the heaviest blows.",
+        strategy: "Immovable object. Focus on defensive positioning.",
+        hints: { pro: "Massive HP pool.", con: "Cannot outrun the storm." }
     },
-    'Shadow Striker': {
-        stats: { venom: 3, camouflage: 2, size: -1, speed: 0, agility: 0 },
-        flags: ['ambush_from_cover', 'disengage_outnumbered'],
-        description: "Slender and melanistic, its body is built for silent movement and rapid venom injection.",
-        strategy: "Glass cannon. Relies on camouflage and alpha-strikes from forest cover."
+    'Whipcoil': {
+        stats: { speed: 4, size: -2, agility: 2, venom: 0, camouflage: 0 },
+        flags: ['high_speed', 'low_hp'],
+        description: "A lightning-fast ribbon of muscle designed for rapid displacement.",
+        strategy: "Speed is life. Never stay in one place long enough to get hit.",
+        hints: { pro: "Outpaces almost anything.", con: "Single mistakes are fatal." }
     },
-    'Dune Sprinter': {
-        stats: { speed: 3, agility: 2, size: -2, venom: 0, camouflage: 0 },
-        flags: ['forage_priority', 'hit_and_run'],
-        description: "Lightweight and elongated, with specialized underside scales shaped for sand-gliding.",
-        strategy: "Scout archetype. Focuses on gathering food and outrunning threats in open desert."
+    'Gilded Hood': {
+        stats: { size: 1, agility: 1, camouflage: -1, venom: 1, speed: 1 },
+        flags: ['intimidation_aura', 'regal_posture'],
+        description: "Sun-bright scales and a menacing flare that strikes fear into observers.",
+        strategy: "Crowd control. Enemies hesitate before striking.",
+        hints: { pro: "Reduces threat intensity.", con: "Impossible to hide." }
     },
-    'River Glider': {
-        stats: { agility: 3, speed: 1, venom: -1, size: 0, camouflage: 0 },
-        flags: ['water_bonus', 'obstacle_bypass'],
-        description: "Hydrodynamic and muscular, with a paddle-like tail that provides unmatched river speed.",
-        strategy: "Mobile disruptor. Can bypass river obstacles and reposition faster than any rival."
+    'Moss-Skin': {
+        stats: { camouflage: 3, size: 0, agility: 1, speed: 0, venom: 0 },
+        flags: ['forest_regen', 'photosynthesis'],
+        description: "Living moss carpets its hide, harmonizing perfectly with lush environments.",
+        strategy: "Sustainability. Heals slowly while in forest tiles.",
+        hints: { pro: "Incredible forest stealth.", con: "Vulnerable to heat." }
+    },
+    'Riverblade': {
+        stats: { agility: 3, speed: 1, size: 0, venom: 0, camouflage: 0 },
+        flags: ['dash_bonus_in_moisture', 'hydrodynamic'],
+        description: "Sleek and sharp-edged, its body cuts through water like a cold scalpel.",
+        strategy: "River exploitation. Use water as a transit highway.",
+        hints: { pro: "Supreme river speed.", con: "Dry soil chaffs." }
     }
 };
 
-export const INSTINCTS: Record<InstinctType, { bias: string; triggers: string[]; description: string; strategy: string }> = {
-    'Hunter': {
+export const INSTINCTS: Record<InstinctType, { bias: string; triggers: string[]; description: string; strategy: string; hints: { pro: string, con: string } }> = {
+    'Cowardly Clever': {
+        bias: 'avoids_combat',
+        triggers: ['bonus_to_run', 'bonus_to_hide'],
+        description: "Recognizes that survival is the only victory that matters.",
+        strategy: "Extreme avoidance. High success chance when running or hiding.",
+        hints: { pro: "Rarely dies early.", con: "Low glory and loot." }
+    },
+    'Bloodrush': {
         bias: 'seeks_enemy',
-        triggers: ['combat_seek', 'pursue_advantage'],
-        description: "Highly sensitive pit organs tuned to detect the thermal signatures of warm-blooded rivals.",
-        strategy: "Proactive combat. Will prioritize hunting down enemies over foraging or safety."
+        triggers: ['combat_scaling', 'kill_frenzy'],
+        description: "The scent of iron triggers a state of focused, lethal aggression.",
+        strategy: "Aggressive snowball. Becomes stronger with every successful bite.",
+        hints: { pro: "Unstoppable late game.", con: "Overextends easily." }
     },
-    'Scavenger': {
-        bias: 'seeks_food',
-        triggers: ['food_seek', 'avoid_combat'],
-        description: "Equipped with a highly refined Jacobson's organ to track decaying matter over long distances.",
-        strategy: "Survival priority. Avoids conflict to focus on food consumption and stat-evolution."
+    'Hoarder': {
+        bias: 'seeks_treasure',
+        triggers: ['treasure_synergy', 'item_finder'],
+        description: "An obsessive drive to collect the glittering relics of previous versions.",
+        strategy: "Wealth accumulation. Finds better items from treasure nodes.",
+        hints: { pro: "Best equipped snakes.", con: "Easily distracted by gold." }
     },
-    'Territorial': {
-        bias: 'claims_region',
-        triggers: ['patrol_zone', 'defend_zone'],
-        description: "Displays aggressive musk-gland marking behavior to define its undisputed domain.",
-        strategy: "Area control. Will patrol a specific coordinate and attack any intruder on sight."
+    'Scout': {
+        bias: 'explores_map',
+        triggers: ['detection_radius', 'hazard_sense'],
+        description: "Hyper-sensitive nerves map the environment far beyond visual range.",
+        strategy: "Intelligence. Avoids hazards and finds food before others.",
+        hints: { pro: "No blind spots.", con: "Not built for direct brawls." }
     },
-    'Opportunist': {
-        bias: 'avoids_risk',
-        triggers: ['evaluate_advantage', 'ambush_seek'],
-        description: "Calculated pacing; waits for rivals to be weakened by hazards before striking.",
-        strategy: "Reactive combat. Only engages when the opponent is wounded or outnumbered."
+    'Duelist': {
+        bias: 'seeks_duel',
+        triggers: ['1v1_bonus', 'honorable_strike'],
+        description: "An instinct for single-target elimination and tactical positioning.",
+        strategy: "Executioner. Massive bonus against isolated enemies.",
+        hints: { pro: "Dominates 1v1 encounters.", con: "Fails vs swarms." }
     }
 };
 
-export const AFFINITIES: Record<AffinityType, { terrain: TerrainType; bonuses: Partial<Stats>; moveCostMod: number; description: string }> = {
-    'Forest-Bonded': {
-        terrain: 'forest',
-        bonuses: { camouflage: 2, agility: 1 },
-        moveCostMod: -1,
-        description: "Green-mottled scales provide perfect concealment within the dappled forest floor."
-    },
-    'Desert-Born': {
+export const AFFINITIES: Record<AffinityType, { terrain: TerrainType | 'any'; bonuses: Partial<Stats>; moveCostMod: number; description: string; hints: { pro: string, con: string } }> = {
+    'Sun-Touched': {
         terrain: 'desert',
-        bonuses: { speed: 2, size: 0 },
+        bonuses: { speed: 2, size: 1 },
         moveCostMod: -1,
-        description: "Metabolically optimized for heat, moving faster as the temperature rises."
+        description: "Infused with solar energy; heat is a stimulant, not a burden.",
+        hints: { pro: "Heat scaling.", con: "Lethargic in frost/rivers." }
     },
-    'River-Blooded': {
+    'Mist-Bound': {
         terrain: 'river',
-        bonuses: { agility: 2 },
-        moveCostMod: -2,
-        description: "Natural buoyancy and fin-like ridges make river travel as effortless as slithering."
-    },
-    'Stone-Scaled': {
-        terrain: 'mountain',
-        bonuses: { size: 2, camouflage: 0 },
+        bonuses: { camouflage: 3, agility: 1 },
         moveCostMod: -1,
-        description: "Mineral-dense skin mimics the craggy textures of the high-altitude peaks."
+        description: "Exudes a cold vapor that merges with the morning fog.",
+        hints: { pro: "Stealth in moisture.", con: "Visible in bone-dry air." }
+    },
+    'Stone-Wise': {
+        terrain: 'mountain',
+        bonuses: { size: 2, agility: 0 },
+        moveCostMod: -1,
+        description: "The spirit of the high peaks resonates in its heavy, mineralized scales.",
+        hints: { pro: "Hazard memory bonus.", con: "Cannot swim easily." }
+    },
+    'Storm-Hardened': {
+        terrain: 'any',
+        bonuses: { agility: 2, speed: 1 },
+        moveCostMod: 0,
+        description: "Tempered by the closing storm until the static is like a heartbeat.",
+        hints: { pro: "Resists phase 2 storm.", con: "No biome-specific highs." }
+    },
+    'Void-Blessed': {
+        terrain: 'any',
+        bonuses: { camouflage: 2, venom: 2 },
+        moveCostMod: 0,
+        description: "Marked by the Glitch; its form flickers between logic and chaos.",
+        hints: { pro: "Binary interaction bonus.", con: "Unpredictable HP jitter." }
     }
 };
 
-export const QUIRKS: Record<QuirkType, { bonuses: Partial<Stats>; behavior: string; penalty?: string; description: string }> = {
+export const QUIRKS: Record<QuirkType, { bonuses: Partial<Stats>; behavior: string; penalty?: string; description: string; hints: { pro: string, con: string } }> = {
+    'Anxious': {
+        bonuses: { speed: 1, agility: 1 },
+        behavior: 'faster_reaction',
+        penalty: 'stamina_drain',
+        description: "A twitchy coil of nerves that reacts before it thinks.",
+        hints: { pro: "High evasion.", con: "Tires out quickly." }
+    },
     'Reckless': {
-        bonuses: { venom: 1 },
-        behavior: 'paths_through_hazards',
-        penalty: 'hazard_damage_2x',
-        description: "A hyper-active nervous system that favors offensive bursts over self-preservation."
+        bonuses: { venom: 2 },
+        behavior: 'more_crits',
+        penalty: 'hazard_risk',
+        description: "Disregards safety entirely for a single, devastating strike.",
+        hints: { pro: "Critical hit specialist.", con: "Magnetic to hazards." }
     },
-    'Cautious': {
-        bonuses: { agility: 1 },
-        behavior: 'strongly_avoids_hazards',
-        penalty: 'speed_-1',
-        description: "Hyper-vigilant tongue-flicking constanty monitors for vibrations and traps."
-    },
-    'Voracious': {
+    'Lucky': {
         bonuses: {},
-        behavior: 'seeks_food_aggressively',
-        penalty: 'feeding_delay',
-        description: "An evolutionary anomaly resulting in a metabolism that requires constant caloric intake."
+        behavior: 'auto_save',
+        penalty: 'random_stat_drop',
+        description: "Favored by the engine's random variable seed in critical moments.",
+        hints: { pro: "Occasional auto-save.", con: "Unreliable base stats." }
     },
-    'Paranoid': {
+    'Dramatic': {
         bonuses: { agility: 1 },
-        behavior: 'retreats_sooner',
-        penalty: 'camouflage_-1',
-        description: "An extreme 'flight' response triggered by even the slightest environmental shift."
+        behavior: 'skill_gain_bonus',
+        description: "Every action is a performance; the engine rewards its flair.",
+        hints: { pro: "Faster skill unlocking.", con: "Attracts attention." }
+    },
+    'Curious': {
+        bonuses: { camouflage: 1 },
+        behavior: 'clue_discovery',
+        description: "A drive to poke its head into every crack and shadow.",
+        hints: { pro: "Clue discovery boost.", con: "Gets trapped often." }
     }
 };

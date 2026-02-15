@@ -1,26 +1,59 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import './App.css'
-import { runBattle } from './engine/engine'
 import { BODIES, INSTINCTS, AFFINITIES, QUIRKS } from './engine/traits'
-import { SnakeDraft, BodyType, InstinctType, AffinityType, QuirkType, EnvironmentParams } from './engine/types'
+import { SnakeDraft, BodyType, InstinctType, AffinityType, QuirkType, EnvironmentParams, EngineVersion, SnakeState } from './engine/types'
 import Arena from './components/Arena'
 import FeedbackLedger from './components/FeedbackLedger'
-import { generateWorld } from './engine/world'
+import CinematicVideo from './components/CinematicVideo'
+import RadiantToy from './components/RadiantToy';
+import SnakeSkinLayout from './components/SnakeSkinLayout';
+import HallOfDesigners from './components/HallOfDesigners';
+import { ChronicleArchive } from './utils/ChronicleArchive';
+import ResonanceTuner from './components/ResonanceTuner';
+import GenreFlux from './components/GenreFlux';
+import AncestorsCoil from './components/AncestorsCoil';
+import ChronicleView from './components/ChronicleView';
+import { DESIGNERS } from './engine/designers';
 import { generateSimulation } from './engine/sim'
 import { generateNarrative } from './engine/narrate'
 
-type EngineVersion = 'v1.0' | 'v2.0' | 'v3.0' | 'v4.0' | 'v5.0' | 'v6.0' | 'v7.0' | 'v8.0';
+enum GameStage {
+    Draft = 'DRAFT',
+    Simulation = 'SIMULATION',
+    CinematicEncounter = 'CINEMATIC_ENCOUNTER',
+    Recap = 'RECAP',
+    Landing = 'LANDING',
+    ModeSelect = 'MODE_SELECT',
+    GenreSelect = 'GENRE_SELECT',
+    DraftOrderSelect = 'DRAFT_ORDER_SELECT',
+    EnvDraft = 'ENV_DRAFT',
+    PrePhase = 'PRE_PHASE',
+    HallOfDesigners = 'HALL_OF_DESIGNERS',
+    RadiantToy = 'RADIANT_TOY',
+    ResonanceTuner = 'RESONANCE_TUNER',
+    GenreFlux = 'GENRE_FLUX',
+    AncestorsCoil = 'ANCESTORS_COIL',
+}
+
+type GameState = 'landing' | 'mode_select' | 'genre_select' | 'draft_order_select' | 'env_draft' | 'draft' | 'battle' | 'recap' | 'pre_phase' | 'hall_of_designers' | 'radiant_toy' | 'resonance_tuner' | 'genre_flux' | 'ancestors_coil' | 'cinematic_video' | 'ledger' | 'chronicle_view';
 
 function App() {
-    const [gameState, setGameState] = useState<any>('landing')
-    const [engineVersion, setEngineVersion] = useState<EngineVersion>('v8.0')
+    const [gameState, setGameState] = useState<GameState>('landing')
+    const [gameStage, setGameStage] = useState<GameStage>(GameStage.Draft); // v13.0 Meta-Stage
+    const [engineVersion, setEngineVersion] = useState<EngineVersion>('v13.0');
+    const [playerName, setPlayerName] = useState<string>('Anonymous'); // v13.0 Identity
     const [envParams, setEnvParams] = useState<EnvironmentParams>({
         climate: 'Standard',
         fauna: 'Standard',
         flora: 'Standard',
         mode: 'SOLO',
-        theme: 'MEDIEVAL'
+        theme: 'MEDIEVAL',
+        genre: 'NOIR',
+        phase: 1
     })
+
+    // Drafting State
+    const [draftOrder, setDraftOrder] = useState<'SNAKE_FIRST' | 'ENV_FIRST'>('SNAKE_FIRST')
     const [draftingSnakeIdx, setDraftingSnakeIdx] = useState(0)
     const [currentDraft, setCurrentDraft] = useState<Partial<SnakeDraft>>({})
     const [playerTeam, setPlayerTeam] = useState<SnakeDraft[]>([])
@@ -32,13 +65,18 @@ function App() {
     const [battleResult, setBattleResult] = useState<any>(null)
     const [activeSim, setActiveSim] = useState<any>(null)
     const [currentEncounter, setCurrentEncounter] = useState<any>(null)
+    const [cinematicView, setCinematicView] = useState<{ choice: any, snake: any } | null>(null)
     const [currentTick, setCurrentTick] = useState(0)
     const [isPlaying, setIsPlaying] = useState(false)
     const playIntervalRef = useRef<number | null>(null)
 
     const selectVersion = (v: EngineVersion) => {
         setEngineVersion(v)
-        if (v === 'v5.0' || v === 'v6.0' || v === 'v7.0' || v === 'v8.0') {
+        if (v === 'v12.0') {
+            setGameState('mode_select')
+        } else if (v === 'v10.0' || v === 'v11.0') {
+            setGameState('mode_select')
+        } else if (v === 'v5.0' || v === 'v6.0' || v === 'v7.0' || v === 'v8.0') {
             setGameState('mode_select')
         } else if (v === 'v4.0') {
             setGameState('env_draft')
@@ -47,8 +85,33 @@ function App() {
         }
     }
 
+    const handleModePick = (mode: any) => {
+        handleEnvPick('mode', mode);
+        if (engineVersion === 'v12.0') {
+            setGameState('genre_select');
+        } else if (engineVersion === 'v10.0' || engineVersion === 'v11.0') {
+            setGameState('draft_order_select');
+        } else {
+            setGameState('env_draft');
+        }
+    }
+
+    const handleDraftOrderPick = (order: 'SNAKE_FIRST' | 'ENV_FIRST') => {
+        setDraftOrder(order);
+        if (order === 'SNAKE_FIRST') {
+            setGameState('draft');
+        } else {
+            setGameState('env_draft');
+        }
+    }
+
     const handleEnvPick = (category: keyof EnvironmentParams, value: any) => {
         setEnvParams(prev => ({ ...prev, [category]: value }))
+    }
+
+    const handleGenrePick = (genre: any) => {
+        handleEnvPick('genre', genre);
+        setGameState('draft_order_select');
     }
 
     const handlePick = (category: keyof SnakeDraft, value: any) => {
@@ -66,11 +129,8 @@ function App() {
 
         if (draftTurn === 'P1') {
             setPlayerTeam(prev => [...prev, draft]);
-            if (isBattle || isCoop) {
-                setDraftTurn('P2');
-            } else {
-                setDraftTurn('ENEMY');
-            }
+            if (isBattle || isCoop) setDraftTurn('P2');
+            else setDraftTurn('ENEMY');
         } else if (draftTurn === 'P2') {
             setP2Team(prev => [...prev, draft]);
             setDraftTurn('ENEMY');
@@ -84,49 +144,111 @@ function App() {
     useEffect(() => {
         const targetCount = 2;
         if (draftingSnakeIdx >= targetCount) {
-            setGameState('battle')
+            if (engineVersion === 'v10.0' && draftOrder === 'SNAKE_FIRST') {
+                setGameState('env_draft');
+            } else {
+                setGameState('battle');
+            }
         }
-    }, [draftingSnakeIdx])
+    }, [draftingSnakeIdx, engineVersion, draftOrder])
 
     const startFight = () => {
         const enemyDrafts: SnakeDraft[] = enemyTeam.length > 0 ? enemyTeam : [1, 2, 3].map(() => ({
-            body: Object.keys(BODIES)[Math.floor(Math.random() * 4)] as BodyType,
-            instinct: Object.keys(INSTINCTS)[Math.floor(Math.random() * 4)] as InstinctType,
-            affinity: Object.keys(AFFINITIES)[Math.floor(Math.random() * 4)] as AffinityType,
-            quirk: Object.keys(QUIRKS)[Math.floor(Math.random() * 4)] as QuirkType
+            body: Object.keys(BODIES)[Math.floor(Math.random() * 5)] as BodyType,
+            instinct: Object.keys(INSTINCTS)[Math.floor(Math.random() * 5)] as InstinctType,
+            affinity: Object.keys(AFFINITIES)[Math.floor(Math.random() * 5)] as AffinityType,
+            quirk: Object.keys(QUIRKS)[Math.floor(Math.random() * 5)] as QuirkType
         }))
 
         const sim = generateSimulation(playerTeam, enemyDrafts, envParams, p2Team)
         setActiveSim(sim)
         setCurrentTick(0)
+        setIsPlaying(true)
     }
 
     const makeChoice = (choice: 'RUN' | 'HIDE' | 'FIGHT') => {
         if (!activeSim || !currentEncounter) return
-        activeSim.resolveEncounter(currentEncounter.snakeId, choice)
-        setCurrentEncounter(null)
-        setIsPlaying(true)
+        const snake = activeSim.snakes.find((s: any) => s.id === currentEncounter.snakeId);
+
+        // v13.0 ALWAYS transitions to CinematicVideo before resolution
+        setCinematicView({ choice, snake });
+        setGameState('cinematic_video');
+        setGameStage(GameStage.CinematicEncounter);
+    }
+
+    const onCinematicComplete = () => {
+        if (!activeSim || !currentEncounter || !cinematicView) return;
+
+        // Resolve logic based on cinematic choice
+        activeSim.handleChoice(currentEncounter.snakeId, cinematicView.choice);
+
+        setCinematicView(null);
+        setCurrentEncounter(null);
+        setGameState('battle');
+        setGameStage(GameStage.Simulation);
+        setIsPlaying(true);
+    }
+
+    const startPhase2 = () => {
+        const nextParams: EnvironmentParams = {
+            ...envParams,
+            climate: ['Standard', 'Arid', 'Lush', 'Binary'][Math.floor(Math.random() * 4)] as any,
+            fauna: ['Standard', 'Hostile', 'Sparse', 'Swarm'][Math.floor(Math.random() * 4)] as any,
+            flora: ['Standard', 'Dense', 'None', 'Obsidian'][Math.floor(Math.random() * 4)] as any,
+            phase: 2
+        };
+        setEnvParams(nextParams);
+        const sim = generateSimulation(activeSim.snakes.map((s: SnakeState) => s.draft), [], nextParams);
+        // Persist skills/stats
+        sim.snakes.forEach((s: any, i: number) => {
+            s.skills = activeSim.snakes[i].skills;
+            s.hp = activeSim.snakes[i].hp;
+        });
+        setActiveSim(sim);
+        setCurrentTick(0);
+        setGameState('battle');
+        setIsPlaying(true);
     }
 
     useEffect(() => {
         if (activeSim) {
-            const encounter = activeSim.events.find((e: any) => e.tick === currentTick && e.type === 'ENCOUNTER_CHOICE')
-            if (encounter && engineVersion === 'v6.0') {
+            const encounter = activeSim.events.find((e: any) => e.tick === currentTick && e.type === 'PENDING_CHOICE')
+            if (encounter) {
                 setCurrentEncounter(encounter)
                 setIsPlaying(false)
             }
         }
 
         if (currentTick >= 60 && activeSim) {
-            setBattleResult({
-                events: activeSim.events,
-                narrative: generateNarrative(activeSim.events, activeSim.snakes, envParams),
-                snakes: activeSim.snakes
-            })
-            setGameState('recap')
-            setActiveSim(null)
+            if (envParams.phase === 1 && engineVersion === 'v10.0') {
+                setGameState('pre_phase');
+                setIsPlaying(false);
+            } else {
+                setBattleResult({
+                    events: activeSim.events,
+                    narrative: generateNarrative(activeSim.events, activeSim.snakes, envParams),
+                    snakes: activeSim.snakes
+                })
+
+                // v13.0: Commit to Chronicle Archive
+                const survivors = activeSim.snakes.filter(s => s.alive);
+                const outcome = survivors.length > 0 ? 'VICTORY' : 'DEFEAT';
+                const narrativeSummary = generateNarrative(activeSim.events, activeSim.snakes, envParams).recap;
+
+                ChronicleArchive.commit(
+                    outcome,
+                    activeSim.snakes,
+                    narrativeSummary,
+                    envParams,
+                    activeSim.radianceScore,
+                    playerName
+                );
+
+                setGameState('recap')
+                setActiveSim(null)
+            }
         }
-    }, [currentTick, activeSim, engineVersion, envParams])
+    }, [currentTick, activeSim, engineVersion, envParams.phase])
 
     useEffect(() => {
         if (isPlaying) {
@@ -140,19 +262,23 @@ function App() {
     }, [isPlaying])
 
     const versions = [
-        { id: 'v1.0', title: 'PRIMAL LOGS', desc: 'The core simulation loop. Pure functional movement and simple terminal-style event tracing.' },
-        { id: 'v2.0', title: 'IDENTITY SPARK', desc: 'Introduction of the Drafting System. Snakes gain Traits, Quirks, and uniquely generated Origin Bios.' },
-        { id: 'v3.0', title: 'GIFT OF SIGHT', desc: 'Transition to React/Vite. The Emoji Arena introduces real-time visual replays of the carnage.' },
-        { id: 'v4.0', title: 'SAGA ENGINE', desc: 'The Story Compiler is born. Events are grouped into dramatic arcs (Exploration, Conflict, Survival).' },
-        { id: 'v5.0', title: 'HONOR & STEEL', desc: 'Multilayered themes (Sci-Fi/Medieval) and Hot-Seat Multiplayer. Introduces the Storm mechanic.' },
-        { id: 'v6.0', title: 'THE MERCHANT', desc: 'Interrupted simulation loop. Manual tactics: Run, Hide, or Fight. Persistent event stacking.' },
-        { id: 'v7.0', title: 'THE GHOST', desc: 'Surgical causality. Autonomous Resolve based on personality, Typed Adversity, and Causal Cascades.' },
-        { id: 'v8.0', title: 'CHRONICLE', desc: 'The Living Chronicle. Cinematic camera, SVG morphing, atmospheric layering, and procedural weather.' }
+        { id: 'v1.0', title: 'PRIMAL LOGS', desc: 'The core simulation loop. Pure functional movement and terminal event tracing.' },
+        { id: 'v2.0', title: 'IDENTITY SPARK', desc: 'Drafting System. Snakes gain Traits, Quirks, and Origin Bios.' },
+        { id: 'v3.0', title: 'GIFT OF SIGHT', desc: 'Visual Replays. Emoji Arena and real-time combat visualization.' },
+        { id: 'v4.0', title: 'SAGA ENGINE', desc: 'Story Compiler. Events grouped into dramatic arcs (Exploration, Conflict).' },
+        { id: 'v5.0', title: 'HONOR & STEEL', desc: 'Themes & Hot-Seat. Introduces the Storm mechanic and Dual Styles.' },
+        { id: 'v6.0', title: 'THE MERCHANT', desc: 'Interrupted loop. Manual tactics: Run, Hide, or Fight.' },
+        { id: 'v7.0', title: 'THE GHOST', desc: 'Surgical causality. Autonomous Resolve based on personality.' },
+        { id: 'v8.0', title: 'CHRONICLE', desc: 'Visual Synthesis. Cinematic camera, SVG morphing, and weather.' },
+        { id: 'v10.0', title: 'EXPEDITION', desc: 'The Grand Expedition. 2-Phase journeys, Brave Deeds, and Cinematic Videos.' },
+        { id: 'v11.0', title: 'FIELDS', desc: 'The Living Field. Scalar fields, noise-based generation, and Treasure Mode.' },
+        { id: 'v12.0', title: 'MULTI-VERSE', desc: 'The Multi-Verse. 5 Narrative Genres with distinct mechanics and prose.' },
+        { id: 'v13.0', title: 'ARCHITECT', desc: 'The Radiant Architect. Meta-agentic design, encounter-driven drama, and systemic resonance.' }
     ];
 
-    const VersionCard = ({ id, title, desc }: { id: string, title: string, desc: string }) => (
+    const VersionCard = ({ id, title }: { id: string, title: string }) => (
         <div
-            className={`megaman-card ${engineVersion === id ? 'active' : ''} ${id === 'v8.0' ? 'v8-glitch' : ''}`}
+            className={`megaman-card ${engineVersion === id ? 'active' : ''} ${id === 'v10.0' ? 'v10-expedition' : ''}`}
             onClick={() => selectVersion(id as any)}
         >
             <div className="card-id">{id}</div>
@@ -160,106 +286,117 @@ function App() {
         </div>
     );
 
-    const openFeedback = () => {
-        const title = `[FEEDBACK] [${engineVersion}] [${envParams.theme}]`;
-        const body = `--- SYSTEM BREADCRUMB ---\nVersion: ${engineVersion}\nTheme: ${envParams.theme}\nClimate: ${envParams.climate}\n-----------------------\n\nPLEASE DESCRIBE YOUR EXPERIENCE:`;
-        window.open(`https://github.com/t3dy/SnakeAutobattler/issues/new?labels=feedback&title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`);
-    }
-
     return (
         <div className="app-container">
+            {gameState === 'hall_of_designers' && <HallOfDesigners onClose={() => setGameState('landing')} />}
+            {gameState === 'radiant_toy' && <RadiantToy onExit={() => setGameState('landing')} />}
+            {gameState === 'resonance_tuner' && <ResonanceTuner onExit={() => setGameState('landing')} />}
+            {gameState === 'genre_flux' && <GenreFlux onExit={() => setGameState('landing')} />}
+            {gameState === 'ancestors_coil' as any && <AncestorsCoil onExit={() => setGameState('landing')} />}
             {gameState === 'ledger' && <FeedbackLedger theme={envParams.theme || 'MEDIEVAL'} onClose={() => setGameState('landing')} />}
+            {gameState === 'chronicle_view' && <ChronicleView onExit={() => setGameState('landing')} />}
+            {gameState === 'cinematic_video' && cinematicView && (
+                <CinematicVideo
+                    choice={cinematicView.choice}
+                    snake={cinematicView.snake.draft}
+                    theme={envParams.theme}
+                    onComplete={onCinematicComplete}
+                />
+            )}
+
             <header>
                 <h1>SNAKE AUTOBATTLER {gameState !== 'landing' && <span className="version-tag">{engineVersion}</span>}</h1>
             </header>
 
             <main>
                 {gameState === 'landing' && (
-                    <div className="landing-page">
-                        <header className="landing-header">
-                            <h1>SNAKE AUTOBATTLER: <span className="highlight-text">EVOLUTION</span></h1>
-                            <p className="subtitle">From Primal Logs to Autonomous Narratives</p>
-                        </header>
-
-                        <div className="intro-section">
-                            <p>Part strategy, part procedural story engine. This project explores <strong>Math-to-Myth</strong> translation, where every simulation event informs a thematic chronicle. Each version represents a leap in how simulation weights turn into world-building.</p>
+                    <>
+                        <div className="player-identity-bar">
+                            <label>OPERATOR ID: </label>
+                            <input
+                                type="text"
+                                value={playerName}
+                                onChange={(e) => setPlayerName(e.target.value)}
+                                placeholder="ENTER NAME..."
+                                className="cyber-input"
+                            />
                         </div>
-
-                        <div className="megaman-grid">
-                            <VersionCard id="v1.0" title="PRIMAL" desc="Core Loop" />
-                            <VersionCard id="v2.0" title="SPARK" desc="Identity" />
-                            <VersionCard id="v3.0" title="SIGHT" desc="Visuals" />
-
-                            <VersionCard id="v4.0" title="SAGA" desc="Narrative" />
-                            <div className="central-logo">
-                                <h2>SNAKE<br />AUTO<br />BATTLER</h2>
-                                <div className="evolution-subtitle">EVOLUTION</div>
-                            </div>
-                            <VersionCard id="v5.0" title="STEEL" desc="Themes" />
-
-                            <VersionCard id="v6.0" title="MERCHANT" desc="Agency" />
-                            <VersionCard id="v7.0" title="GHOST" desc="Resolve" />
-                            <VersionCard id="v8.0" title="CHRONICLE" desc="Cinematic" />
-
-                            <div className="megaman-card secret-boss" onClick={openFeedback}>
-                                <div className="card-id">99.9</div>
-                                <div className="card-title">✍️ FEEDBACK</div>
-                            </div>
-                            <div className="megaman-card secret-boss" onClick={() => setGameState('ledger')}>
-                                <div className="card-id">LEDGER</div>
-                                <div className="card-title">📜 ARCHIVE</div>
-                            </div>
-                            <div className="megaman-card" style={{ opacity: 0.2, cursor: 'default' }}>
-                                <div className="card-id">???</div>
-                                <div className="card-title">LOCKED</div>
-                            </div>
-                        </div>
-
-                        <div className="version-detail-pane">
-                            {engineVersion ? (
-                                <div className="detail-content animate-slide-up">
-                                    <span className="detail-tag">{engineVersion}</span>
-                                    <h4>{versions.find(v => v.id === engineVersion)?.title}</h4>
-                                    <p>{versions.find(v => v.id === engineVersion)?.desc}</p>
-                                    <button className="unleash-btn-large" onClick={() => setGameState('mode_select')}>INITIALIZE MODULE</button>
-                                </div>
-                            ) : (
-                                <p className="select-hint">SELECT AN ENGINE ARCHIVE TO PROCEED</p>
-                            )}
-                        </div>
-
-                        <div className="tech-footer">
-                            <span>Engine Status: <span className="status-online">Operational</span></span>
-                            <span>Latest Update: v8.0 (The Living Chronicle)</span>
-                        </div>
-                    </div>
+                        <SnakeSkinLayout
+                            versions={versions}
+                            onSelectVersion={(id) => setEngineVersion(id as EngineVersion)}
+                            onSelectToy={(toyId) => setGameState(toyId as any)}
+                            currentVersion={engineVersion}
+                        />
+                    </>
                 )}
 
                 {gameState === 'mode_select' && (
                     <div className="mode-select-screen">
-                        <h2>SELECT ENGAGEMENT PROTOCOL</h2>
+                        <h2>CHOOSE YOUR CHALLENGE</h2>
                         <div className="option-grid">
-                            <button onClick={() => { handleEnvPick('mode', 'SOLO'); setGameState('env_draft'); }}>SOLO EXPEDITION</button>
-                            <button onClick={() => { handleEnvPick('mode', 'HOTSEAT_BATTLE'); setGameState('env_draft'); }}>HOTSEAT CLASH</button>
-                            <button onClick={() => { handleEnvPick('mode', 'HOTSEAT_COOP'); setGameState('env_draft'); }}>HOTSEAT CO-OP</button>
+                            <button onClick={() => handleModePick('SOLO')}>SOLO EXPEDITION</button>
+                            <button onClick={() => handleModePick('HOTSEAT_BATTLE')}>HOTSEAT CLASH</button>
+                            <button onClick={() => handleModePick('HOTSEAT_COOP')}>HOTSEAT CO-OP</button>
+                            <button onClick={() => handleModePick('TREASURE_EXPEDITION')}>TREASURE HUNT</button>
+                        </div>
+                    </div>
+                )}
+
+                {gameState === 'genre_select' && (
+                    <div className="mode-select-screen">
+                        <h2>SELECT NARRATIVE GENRE</h2>
+                        <div className="option-grid">
+                            <button onClick={() => handleGenrePick('SLAPSTICK')}>🤡 SLAPSTICK</button>
+                            <button onClick={() => handleGenrePick('ZOMBIE')}>🧟 ZOMBIE</button>
+                            <button onClick={() => handleGenrePick('NOIR')}>🕵️ NOIR</button>
+                            <button onClick={() => handleGenrePick('SPY')}>🕶️ SPY</button>
+                            <button onClick={() => handleGenrePick('ALIEN')}>👽 ALIEN</button>
+                        </div>
+                    </div>
+                )}
+
+                {gameState === 'draft_order_select' && (
+                    <div className="mode-select-screen">
+                        <h2>EXPEDITION DOCTRINE</h2>
+                        <div className="option-grid">
+                            <button onClick={() => handleDraftOrderPick('SNAKE_FIRST')}>
+                                🐍 SNAKE FIRST
+                                <span className="btn-subtext">Draft your brood, then choose where they hunt.</span>
+                            </button>
+                            <button onClick={() => handleDraftOrderPick('ENV_FIRST')}>
+                                🌍 ENVIRONMENT FIRST
+                                <span className="btn-subtext">Understand the land, then draft survivors.</span>
+                            </button>
                         </div>
                     </div>
                 )}
 
                 {gameState === 'env_draft' && (
                     <div className="env-draft-screen">
-                        <h2>ARENA PARAMETERS</h2>
+                        <h2>PHASE 1: CHOSEN LAND</h2>
+                        <div className="draft-hint-box">
+                            💡 {envParams.theme === 'MEDIEVAL' ? "Ancient maps suggest high hazards." : "Satellite data indicates swarm activity."}
+                        </div>
                         <CategoryBox title="THEME" options={{ MEDIEVAL: '⚔️', SCIFI: '🚀' }} onSelect={(val: any) => handleEnvPick('theme', val)} />
                         <CategoryBox title="CLIMATE" options={{ Standard: '☁️', Arid: '🏜️', Lush: '🌴', Binary: '💾' }} onSelect={(val: any) => handleEnvPick('climate', val)} />
-                        <CategoryBox title="FAUNA" options={{ Standard: '🐄', Hostile: '👹', Sparse: '🌵', Swarm: '🐝' }} onSelect={(val: any) => handleEnvPick('fauna', val)} />
-                        <CategoryBox title="FLORA" options={{ Standard: '🌿', Dense: '🌳', None: '🏜️', Obsidian: '💎' }} onSelect={(val: any) => handleEnvPick('flora', val)} />
-                        <button onClick={() => setGameState('draft')}>LOCK & DRAFT</button>
+                        <button className="unleash-btn" onClick={() => setGameState(draftOrder === 'ENV_FIRST' ? 'draft' : 'battle')}>
+                            {draftOrder === 'ENV_FIRST' ? 'RECRUIT BROOD' : 'BEGIN EXPEDITION'}
+                        </button>
                     </div>
                 )}
 
                 {gameState === 'draft' && (
                     <div className="draft-screen">
                         <h2>BROOD SELECTION ({draftTurn})</h2>
+                        <div className="snake-naming">
+                            <input
+                                type="text"
+                                placeholder={`Name your ${currentDraft.body || 'Snake'}...`}
+                                value={currentDraft.name || ''}
+                                onChange={(e) => setCurrentDraft({ ...currentDraft, name: e.target.value })}
+                                className="cyber-input snake-name-input"
+                            />
+                        </div>
                         <div className="draft-ui">
                             {!currentDraft.body && <CategoryBox title="BODY" options={BODIES} onSelect={(val: any) => handlePick('body', val)} />}
                             {currentDraft.body && !currentDraft.instinct && <CategoryBox title="INSTINCT" options={INSTINCTS} onSelect={(val: any) => handlePick('instinct', val)} />}
@@ -273,59 +410,59 @@ function App() {
                     <div className="battle-screen">
                         {activeSim ? (
                             <div className="scene-container">
-                                {((engineVersion as string) === 'v8.0') && <div className="parallax-backdrop" style={{ backgroundImage: `url('https://api.dicebear.com/7.x/shapes/svg?seed=${envParams.climate}')` }} />}
-                                <h2>THE SAGA UNFOLDS</h2>
-                                <Arena
-                                    world={activeSim.world}
-                                    events={activeSim.events}
-                                    currentTick={currentTick}
-                                    snakes={activeSim.snakes}
-                                    params={{ ...envParams, version: engineVersion }}
-                                />
+                                <h2>PHASE {envParams.phase}: {envParams.phase === 1 ? 'PREPARATION' : 'THE UNKNOWN'}</h2>
+                                <Arena world={activeSim.world} events={activeSim.events} currentTick={currentTick} snakes={activeSim.snakes} params={{ ...envParams, version: engineVersion }} />
                                 {currentEncounter && (
                                     <div className="choice-modal">
-                                        <div className="scene-description">
-                                            <p>A critical junction in the {currentEncounter.terrain}!</p>
-                                        </div>
+                                        <h3>ENCOUNTER DETECTED</h3>
+                                        <p>A junction in the {currentEncounter.terrain}!</p>
                                         <div className="choice-options">
-                                            <button onClick={() => makeChoice('RUN')}>RUN</button>
-                                            <button onClick={() => makeChoice('HIDE')}>HIDE</button>
-                                            <button onClick={() => makeChoice('FIGHT')}>FIGHT</button>
+                                            <button onClick={() => makeChoice('RUN')}>🏃 RUN</button>
+                                            <button onClick={() => makeChoice('HIDE')}>🕵️ HIDE</button>
+                                            <button onClick={() => makeChoice('FIGHT')}>⚔️ FIGHT</button>
                                         </div>
                                     </div>
                                 )}
                             </div>
                         ) : (
                             <div className="pre-battle">
-                                <h2>READY FOR EXPEDITION</h2>
-                                <button className="unleash-btn" onClick={startFight}>UNLEASH THE SAGA</button>
+                                <button className="unleash-btn" onClick={startFight}>ENTER THE ARCHIVE</button>
                             </div>
                         )}
                     </div>
                 )}
 
-                {gameState === 'recap' && battleResult && (
-                    <div className="recap-screen">
-                        <h2>THE CHRONICLE OF {envParams.climate}</h2>
-                        <div className="recap-narrative">
-                            {battleResult.narrative.map((s: any, i: number) => (
-                                <div key={i} className={`story-arc ${s.isCascade ? 'cascade' : ''}`}>
-                                    <h4>{s.title}</h4>
-                                    {Array.isArray(s.story) ? (
-                                        <div className="surgical-log">
-                                            {s.story.map((line: string, li: number) => <p key={li}>{line}</p>)}
-                                        </div>
-                                    ) : (
-                                        <p>{typeof s.story === 'string' ? s.story : s.story.fullStory}</p>
-                                    )}
+                {gameState === 'pre_phase' && (
+                    <div className="mode-select-screen">
+                        <h2>PHASE 1 COMPLETE</h2>
+                        <p>Your brood has survived the known. Now they descend into the unknown depths.</p>
+                        <div className="snake-stats-list">
+                            {activeSim?.snakes.map((s: any) => (
+                                <div key={s.id} className="snake-stat-row">
+                                    {s.name}: {s.hp} HP | Skills: {s.skills.join(', ') || 'None'}
                                 </div>
                             ))}
                         </div>
-                        <div className="recap-actions">
-                            <button onClick={() => window.location.reload()}>NEW EXPEDITION</button>
-                            <button className="recap-feedback-btn" onClick={openFeedback}>✍️ LEAVE FEEDBACK</button>
-                            <button className="recap-ledger-btn" onClick={() => setGameState('ledger')}>📜 VIEW PUBLIC LEDGER</button>
+                        <button className="unleash-btn-large" onClick={startPhase2}>DESCEND TO PHASE 2</button>
+                    </div>
+                )}
+
+                {gameState === 'recap' && battleResult && (
+                    <div className="recap-screen">
+                        <h2>EXPEDITION LOG: {envParams.genre}</h2>
+                        <div className="recap-tone">
+                            <p>{battleResult.narrative.recap}</p>
                         </div>
+                        <div className="recap-narrative">
+                            {battleResult.narrative.snakeStories.map((s: any, i: number) => (
+                                <div key={i} className="story-arc">
+                                    <h4>{s.name}</h4>
+                                    <p className="bio"><i>{s.bio}</i></p>
+                                    <p>{s.story.fullStory}</p>
+                                </div>
+                            ))}
+                        </div>
+                        <button onClick={() => window.location.reload()}>FORGE NEW SAGA</button>
                     </div>
                 )}
             </main>
@@ -338,8 +475,16 @@ function CategoryBox({ title, options, onSelect }: any) {
         <div className="category-box">
             <h3>{title}</h3>
             <div className="option-grid">
-                {Object.keys(options).map(opt => (
-                    <button key={opt} onClick={() => onSelect(opt)}>{opt}</button>
+                {Object.entries(options).map(([opt, data]: any) => (
+                    <button key={opt} onClick={() => onSelect(opt)} className="option-btn">
+                        <div className="opt-name">{opt}</div>
+                        {data.hints && (
+                            <div className="opt-hints">
+                                <span className="pro">+{data.hints.pro}</span>
+                                <span className="con">-{data.hints.con}</span>
+                            </div>
+                        )}
+                    </button>
                 ))}
             </div>
         </div>

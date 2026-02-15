@@ -9,7 +9,7 @@ export function runBattle(
     enemyDrafts: SnakeDraft[],
     params: EnvironmentParams = {
         climate: 'Standard', fauna: 'Standard', flora: 'Standard',
-        mode: 'SOLO', theme: 'MEDIEVAL'
+        mode: 'SOLO', theme: 'MEDIEVAL', phase: 1, genre: 'NOIR'
     }
 ) {
     const world = generateWorld(params);
@@ -64,6 +64,7 @@ function createSnake(name: string, team: 'player' | 'enemy', draft: SnakeDraft, 
         honor: 0,
         gear: [],
         scavengeProfit: 0,
-        storyHistory: []
+        storyHistory: [],
+        skills: []
     }
 }
