@@ -1,13 +1,12 @@
-```typescript
 import { Cell, TerrainType, EnvironmentParams } from './types';
 
 export function generateWorld(
-  params: EnvironmentParams = { 
-    climate: 'Standard', fauna: 'Standard', flora: 'Standard',
-    mode: 'SOLO', theme: 'MEDIEVAL'
-  },
-  width: number = 16, 
-  height: number = 12
+    params: EnvironmentParams = {
+        climate: 'Standard', fauna: 'Standard', flora: 'Standard',
+        mode: 'SOLO', theme: 'MEDIEVAL'
+    },
+    width: number = 16,
+    height: number = 12
 ): Cell[][] {
     const world: Cell[][] = [];
     const terrainTypes: TerrainType[] = ['forest', 'desert', 'river', 'mountain'];
@@ -83,7 +82,6 @@ export function generateWorld(
     for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
             const cell = world[y][x];
-            // Forest density affects flora-based food?
             let currentFoodChance = foodChance;
             if (cell.terrain === 'forest') currentFoodChance *= floraMod;
 

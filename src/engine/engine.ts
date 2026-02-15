@@ -18,7 +18,7 @@ export function runBattle(
         ...enemyDrafts.map((d, i) => createSnake(d, `EnemySnake_${i}`, 'enemy', { x: 15, y: Math.floor(i * 4) }))
     ];
 
-    const sim = new Simulation(world, snakes, envParams);
+    const sim = new Simulation(world, snakes, params);
     const events = sim.run();
 
     return {
@@ -32,7 +32,6 @@ export function runBattle(
 function createSnake(draft: SnakeDraft, name: string, team: 'player' | 'enemy', pos: { x: number, y: number }): SnakeState {
     const baseStats: Stats = { speed: 5, size: 5, venom: 5, agility: 5, camouflage: 5 };
 
-    // Apply trait modifiers
     const body = BODIES[draft.body];
     const affinity = AFFINITIES[draft.affinity];
     const quirk = QUIRKS[draft.quirk];
@@ -66,12 +65,9 @@ function createSnake(draft: SnakeDraft, name: string, team: 'player' | 'enemy', 
             food: [],
             enemies: []
         },
-        evolution: {
-            speed: 0,
-            size: 0,
-            venom: 0,
-            agility: 0,
-            camouflage: 0
-        }
+        evolution: {},
+        experience: 0,
+        honor: 0,
+        gear: []
     };
 }
