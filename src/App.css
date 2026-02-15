@@ -1811,3 +1811,56 @@ button:hover {
     font-weight: 800;
     letter-spacing: 2px;
 }
+
+/* Narrative Log Terminal (v15.0 Total De-Graphication) */
+.narrative-log-terminal {
+    width: 100%;
+    height: 500px;
+    background: #000;
+    border: 2px solid #00ff7f;
+    box-shadow: inset 0 0 20px rgba(0, 255, 127, 0.1);
+    margin: 20px 0;
+    padding: 20px;
+    overflow-y: auto;
+    font-family: 'Courier New', Courier, monospace;
+    text-align: left;
+    display: flex;
+    flex-direction: column-reverse;
+    /* Scroll from bottom */
+}
+
+.log-entries {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.log-entry {
+    color: #fff;
+    font-size: 1.1rem;
+    line-height: 1.5;
+    animation: fadeInLog 0.3s ease-out;
+}
+
+.cursor-indicator {
+    color: #00ff7f;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+@keyframes fadeInLog {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Hidden elements for v15.0 */
+.v15-hidden {
+    display: none !important;
+}

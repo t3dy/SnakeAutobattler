@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import './App.css'
 import { BODIES, INSTINCTS, AFFINITIES, QUIRKS } from './engine/traits'
-import { SnakeDraft, BodyType, InstinctType, AffinityType, QuirkType, EnvironmentParams, EngineVersion, SnakeState } from './engine/types'
+import { SnakeDraft, BodyType, InstinctType, AffinityType, QuirkType, EnvironmentParams, EngineVersion, SnakeState, GameEvent } from './engine/types'
 import Arena from './components/Arena'
 import FeedbackLedger from './components/FeedbackLedger'
 import CinematicVideo from './components/CinematicVideo'
@@ -73,6 +73,7 @@ function App() {
     const [isPlaying, setIsPlaying] = useState(false)
     const [sessionSeed, setSessionSeed] = useState<number>(Date.now())
     const [encounterAccount, setEncounterAccount] = useState<string | null>(null)
+    const [narrativeLog, setNarrativeLog] = useState<{ id: string, text: string }[]>([])
     const playIntervalRef = useRef<number | null>(null)
 
     const selectVersion = (v: EngineVersion) => {
@@ -286,8 +287,33 @@ function App() {
     useEffect(() => {
         if (isPlaying && activeSim) {
             playIntervalRef.current = window.setInterval(() => {
+                const prevEventsCount = activeSim.events.length;
                 activeSim.step(); // v15.0 Stabilization: Step the engine
                 setCurrentTick(activeSim.tick);
+
+                // v15.0 Total De-Graphication: Stream Narrative Log
+                if (engineVersion === 'v15.0') {
+                    const newEvents = activeSim.events.slice(prevEventsCount);
+                    newEvents.forEach((e: GameEvent) => {
+                        // We only log events that have narrative significance (MOVE, HAZARD, CASCADE, etc)
+                        if (['MOVE', 'HAZARD_HIT', 'KO', 'VICTORY', 'DEFEAT', 'DAMAGE', 'FEAT_ACCOMPLISHED', 'PHASE_SHIFT'].includes(e.type)) {
+                            const snake = activeSim.snakes.find((s: SnakeState) => s.id === e.snakeId);
+                            if (snake || e.snakeId === 'SYSTEM') {
+                                // For simplicity, we create a basic context or use composer directly
+                                // Here we can use the generateNarrative helper but it's built for lists
+                                // Let's use a simplified version of compileGenreArcs logic or just map it
+                                const mockNarrative = generateNarrative([e], activeSim.snakes, envParams);
+                                const text = mockNarrative.snakeStories.find(s => s.name === snake?.name)?.story.fullStory
+                                    || (e.snakeId === 'SYSTEM' ? (e.tags[0] || "System event detected.") : null);
+
+                                if (text) {
+                                    setNarrativeLog(prev => [...prev, { id: e.id, text }]);
+                                }
+                            }
+                        }
+                    });
+                }
+
                 if (activeSim.tick >= 60) {
                     setIsPlaying(false);
                 }
@@ -526,8 +552,22 @@ function App() {
                     <div className="battle-screen">
                         {activeSim ? (
                             <div className="scene-container">
-                                <h2>PHASE {envParams.phase}: {envParams.phase === 1 ? 'PREPARATION' : 'THE UNKNOWN'}</h2>
-                                <Arena world={activeSim.world} events={activeSim.events} currentTick={currentTick} snakes={activeSim.snakes} params={{ ...envParams, version: engineVersion }} />
+                                {engineVersion !== 'v15.0' && <h2>PHASE {envParams.phase}: {envParams.phase === 1 ? 'PREPARATION' : 'THE UNKNOWN'}</h2>}
+
+                                {engineVersion === 'v15.0' ? (
+                                    <div className="narrative-log-terminal">
+                                        <div className="log-entries">
+                                            {narrativeLog.map((entry) => (
+                                                <div key={entry.id} className="log-entry">
+                                                    <span className="cursor-indicator">{'>'}</span> {entry.text}
+                                                </div>
+                                            ))}
+                                            <div id="log-anchor" />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <Arena world={activeSim.world} events={activeSim.events} currentTick={currentTick} snakes={activeSim.snakes} params={{ ...envParams, version: engineVersion }} />
+                                )}
                                 {currentEncounter && (
                                     <div className="choice-modal">
                                         <h3>ENCOUNTER: {currentEncounter.terrain.toUpperCase()}</h3>
