@@ -172,18 +172,18 @@ function App() {
                         </header>
 
                         <div className="intro-section">
-                            <p>Welcome to a persistent narrative experiment. Part strategy, part storytelling, this project explores <strong>Math-to-Myth</strong> translation—where simulation data generates lush, thematic prose. Witness the growth, struggle, and eventual legacy of your brood through six generations of engine development.</p>
+                            <p>Part strategy, part procedural story engine. This project explores <strong>Math-to-Myth</strong> translation, where every simulation event informs a thematic chronicle. Each version represents a leap in how simulation weights turn into world-building.</p>
                         </div>
 
                         <div className="version-showcase">
                             {[
-                                { id: 'v1.0', title: 'PRIMAL LOGS', desc: 'The core simulation loop. Pure functional movement and simple terminal-style event tracing.' },
-                                { id: 'v2.0', title: 'IDENTITY SPARK', desc: 'Introduction of the Drafting System. Snakes gain Traits, Quirks, and uniquely generated Origin Bios.' },
-                                { id: 'v3.0', title: 'GIFT OF SIGHT', desc: 'Transition to React/Vite. The Emoji Arena introduces real-time visual replays of the carnage.' },
-                                { id: 'v4.0', title: 'SAGA ENGINE', desc: 'The Story Compiler is born. Events are grouped into dramatic arcs (Exploration, Conflict, Survival).' },
-                                { id: 'v5.0', title: 'HONOR & STEEL', desc: 'Multilayered themes (Sci-Fi/Medieval) and Hot-Seat Multiplayer. Introduces the Storm mechanic.' },
-                                { id: 'v6.0', title: 'THE MERCHANT', desc: 'Interrupted simulation loop. Manual tactics: Run, Hide, or Fight. Persistent event stacking.' },
-                                { id: 'v7.0', title: 'THE GHOST', desc: 'Surgical causality. Autonomous Resolve based on personality, Typed Adversity, and Causal Cascades.' }
+                                { id: 'v1.0', title: 'PRIMAL LOGS', desc: 'Core simulation loop. Pure functional movement and simple event tracing.' },
+                                { id: 'v2.0', title: 'IDENTITY SPARK', desc: 'Snake Traits and uniquely generated Origin Bios.' },
+                                { id: 'v3.0', title: 'GIFT OF SIGHT', desc: 'Emoji Arena introduces real-time visual replays.' },
+                                { id: 'v4.0', title: 'SAGA ENGINE', desc: 'Story Compiler groups events into dramatic arcs.' },
+                                { id: 'v5.0', title: 'HONOR & STEEL', desc: 'Themes (Sci-Fi/Medieval) and Hot-Seat Multiplayer.' },
+                                { id: 'v6.0', title: 'THE MERCHANT', desc: 'Interrupted simulation with Manual Tactics: Run, Hide, Fight.' },
+                                { id: 'v7.0', title: 'THE GHOST', desc: 'Autonomous Resolve, Typed Adversity, and Causal Cascades.' }
                             ].map(v => (
                                 <div key={v.id} className={`version-card ${engineVersion === v.id ? 'active' : ''}`} onClick={() => selectVersion(v.id as any)}>
                                     <div className="version-tag">{v.id}</div>

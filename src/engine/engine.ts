@@ -31,12 +31,16 @@ export function runBattle(
 }
 
 function createSnake(name: string, team: 'player' | 'enemy', draft: SnakeDraft, index: number): SnakeState {
+    const bodyStats = BODIES[draft.body].stats;
+    const affinityBonuses = AFFINITIES[draft.affinity].bonuses;
+    const quirkBonuses = QUIRKS[draft.quirk].bonuses;
+
     const baseStats: Stats = {
-        speed: BODIES[draft.body].stats.speed + INSTINCTS[draft.instinct].stats.speed,
-        size: BODIES[draft.body].stats.size + AFFINITIES[draft.affinity].stats.size,
-        venom: INSTINCTS[draft.instinct].stats.venom + QUIRKS[draft.quirk].stats.venom,
-        agility: AFFINITIES[draft.affinity].stats.agility + BODIES[draft.body].stats.agility,
-        camouflage: QUIRKS[draft.quirk].stats.camouflage + AFFINITIES[draft.affinity].stats.camouflage
+        speed: (bodyStats.speed || 0) + (affinityBonuses.speed || 0) + (quirkBonuses.speed || 0),
+        size: (bodyStats.size || 0) + (affinityBonuses.size || 0) + (quirkBonuses.size || 0),
+        venom: (bodyStats.venom || 0) + (affinityBonuses.venom || 0) + (quirkBonuses.venom || 0),
+        agility: (bodyStats.agility || 0) + (affinityBonuses.agility || 0) + (quirkBonuses.agility || 0),
+        camouflage: (bodyStats.camouflage || 0) + (affinityBonuses.camouflage || 0) + (quirkBonuses.camouflage || 0)
     };
 
     return {
