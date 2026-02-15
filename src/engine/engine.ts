@@ -1,8 +1,8 @@
+import { SnakeState, SnakeDraft, Stats, EnvironmentParams } from './types';
+import { BODIES, INSTINCTS, AFFINITIES, QUIRKS } from './traits';
 import { generateWorld } from './world';
 import { Simulation } from './sim';
 import { generateNarrative } from './narrate';
-import { SnakeDraft, SnakeState, Stats, EnvironmentParams } from './types';
-import { BODIES, AFFINITIES, QUIRKS } from './traits';
 
 export function runBattle(
     playerDrafts: SnakeDraft[],
@@ -14,8 +14,8 @@ export function runBattle(
 ) {
     const world = generateWorld(params);
     const snakes: SnakeState[] = [
-        ...playerDrafts.map((d, i) => createSnake(d, `PlayerSnake_${i}`, 'player', { x: 0, y: Math.floor(i * 4) })),
-        ...enemyDrafts.map((d, i) => createSnake(d, `EnemySnake_${i}`, 'enemy', { x: 15, y: Math.floor(i * 4) }))
+        ...playerDrafts.map((d, i) => createSnake(`Blue-${i}`, 'player', d, i)),
+        ...enemyDrafts.map((d, i) => createSnake(`Red-${i}`, 'enemy', d, i))
     ];
 
     const sim = new Simulation(world, snakes, params);
@@ -26,50 +26,40 @@ export function runBattle(
         events,
         narrative: generateNarrative(events, snakes, params),
         snakes,
-        sim // Exposing sim to App.tsx for choice interaction
+        sim
     };
 }
 
-function createSnake(draft: SnakeDraft, name: string, team: 'player' | 'enemy', pos: { x: number, y: number }): SnakeState {
-    const baseStats: Stats = { speed: 5, size: 5, venom: 5, agility: 5, camouflage: 5 };
-
-    const body = BODIES[draft.body];
-    const affinity = AFFINITIES[draft.affinity];
-    const quirk = QUIRKS[draft.quirk];
-
-    const combinedStats = { ...baseStats };
-    const apply = (mod: Partial<Stats>) => {
-        Object.entries(mod).forEach(([k, v]) => (combinedStats[k as keyof Stats] += v!));
+function createSnake(name: string, team: 'player' | 'enemy', draft: SnakeDraft, index: number): SnakeState {
+    const baseStats: Stats = {
+        speed: BODIES[draft.body].stats.speed + INSTINCTS[draft.instinct].stats.speed,
+        size: BODIES[draft.body].stats.size + AFFINITIES[draft.affinity].stats.size,
+        venom: INSTINCTS[draft.instinct].stats.venom + QUIRKS[draft.quirk].stats.venom,
+        agility: AFFINITIES[draft.affinity].stats.agility + BODIES[draft.body].stats.agility,
+        camouflage: QUIRKS[draft.quirk].stats.camouflage + AFFINITIES[draft.affinity].stats.camouflage
     };
 
-    apply(body.stats);
-    apply(affinity.bonuses);
-    apply(quirk.bonuses);
-
     return {
-        id: Math.random().toString(36).substr(2, 9),
+        id: `${team}-${index}-${Math.random().toString(36).substr(2, 5)}`,
         name,
         team,
         hp: 100,
         maxHp: 100,
-        pos,
+        pos: { x: index * 2 + 2, y: team === 'player' ? 2 : 10 },
         draft,
-        baseStats: combinedStats,
-        currentStats: { ...combinedStats },
+        baseStats,
+        currentStats: { ...baseStats },
         aiState: 'searching',
         alive: true,
         inventory: [],
         statuses: [],
         flags: [],
-        memory: {
-            hazards: [],
-            food: [],
-            enemies: []
-        },
+        memory: { hazards: [], food: [], enemies: [] },
         evolution: {},
         experience: 0,
         honor: 0,
         gear: [],
-        scavengeProfit: 0
-    };
+        scavengeProfit: 0,
+        storyHistory: []
+    }
 }
